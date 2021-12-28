@@ -10,7 +10,7 @@ version = "0.1"
 description = ""
 
 [project.optional-dependencies]
-dev = ["black", "isort", "flake8", "pytest"]
+dev = ["black", "isort", "flake8", "pytest", "rich", "pytest-asyncio"]
 
 [project.urls]
 Home = "https://github.com/Tinche/incant"

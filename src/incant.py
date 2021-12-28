@@ -3,11 +3,10 @@ import uuid
 
 from collections.abc import Mapping
 from functools import lru_cache
-from inspect import Parameter, Signature, signature
-from typing import Any, Callable, TypeVar, Union
+from inspect import Parameter, Signature, iscoroutinefunction, signature
+from typing import Any, Awaitable, Callable, Optional, TypeVar, Union
 
 from attr import Factory, define
-from rich import print
 
 
 R = TypeVar("R")
@@ -43,73 +42,6 @@ class LocalVarFactory:
 LocalVar = Union[LocalVarConstant, LocalVarFactory]
 
 
-def _compile_fn(
-    fn,
-    outer_args: list[ParameterDep],
-    local_vars: list[LocalVar],
-) -> Callable:
-    # Some arguments need to be taken from outside.
-    # Some arguments need to be calculated from factories.
-    fn_name = f"invoke_{fn.__name__}"
-    globs = {"_incant_inner_fn": fn}
-    arg_lines = []
-    for dep in outer_args:
-        if dep.type is not Signature.empty:
-            arg_type_snippet = f": _incant_arg_{dep.arg_name}"
-            globs[f"_incant_arg_{dep.arg_name}"] = dep.type
-        else:
-            arg_type_snippet = ""
-
-        arg_lines.append(f"{dep.arg_name}{arg_type_snippet}")
-    outer_arg_names = {o.arg_name for o in outer_args}
-
-    lines = []
-    lines.append(f"def {fn_name}({', '.join(arg_lines)}):")
-    local_vars_ix_by_factory = {
-        local_var.factory: ix for ix, local_var in enumerate(local_vars)
-    }
-    for i, local_var in enumerate(local_vars):
-        local_name = f"_incant_local_{i}"
-        if isinstance(local_var, LocalVarConstant):
-            local_var_local_val = f"_incant_local_val_{i}"
-            lines.append(f"  {local_name} = {local_var_local_val}")
-            globs[local_var_local_val] = local_var.value
-        else:
-            local_var_factory = f"_incant_local_factory_{i}"
-            globs[local_var_factory] = local_var.factory
-            local_arg_lines = []
-            for local_arg in local_var.args:
-                if isinstance(local_arg, ParameterDep):
-                    local_arg_lines.append(local_arg.arg_name)
-                else:
-                    local_arg_lines.append(
-                        f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
-                    )
-            lines.append(
-                f"  {local_name} = {local_var_factory}({', '.join(local_arg_lines)})"
-            )
-
-    incant_arg_lines = []
-    local_var_ix = len(local_vars) - 1
-    for name in signature(fn).parameters:
-        if name in outer_arg_names:
-            incant_arg_lines.append(name)
-        else:
-            incant_arg_lines.append(f"_incant_local_{local_var_ix}")
-            local_var_ix -= 1
-
-    lines.append(f"  return _incant_inner_fn({', '.join(incant_arg_lines)})")
-
-    script = "\n".join(lines)
-    print(script)
-
-    fname = _generate_unique_filename(fn.__name__)
-    eval(compile(script, fname, "exec"), globs)
-
-    fn = globs[fn_name]
-    return fn
-
-
 @define(slots=False)
 class Incanter:
     hook_registry: list = Factory(list)
@@ -117,8 +49,11 @@ class Incanter:
     def __attrs_post_init__(self):
         self._gen_fn = lru_cache(None)(self._gen_fn)
 
-    def invoke(self, fn, *args, **kwargs):
+    def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
         return self._gen_fn(fn)(*args, **kwargs)
+
+    async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
+        return await self._gen_fn(fn, True)(*args, **kwargs)
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
@@ -147,6 +82,14 @@ class Incanter:
                 raise TypeError(f"Cannot fulfil argument {arg_name}")
         return prepared_fn(*prepared_args, **prepared_kwargs)
 
+    def parameters(self, fn: Callable) -> Mapping[str, Parameter]:
+        """Return the signature needed to successfully and exactly invoke `fn`."""
+        return signature(self._gen_fn(fn, is_async=None)).parameters
+
+    def register_hook(self, predicate: Callable[[str, Any], bool], factory: Callable):
+        self.hook_registry.append((predicate, factory))
+        self._gen_fn.cache_clear()
+
     def _gen_dep_tree(self, fn: Callable) -> list[tuple[Callable, list[Dep]]]:
         """Generate the dependency tree for `fn` given the current hook reg."""
         to_process = [fn]
@@ -170,22 +113,30 @@ class Incanter:
                 final_nodes.insert(0, (node, dependents))
         return final_nodes
 
-    def _gen_fn(self, fn: Callable):
+    def _gen_fn(self, fn: Callable, is_async: Optional[bool] = False):
         dep_tree = self._gen_dep_tree(fn)
 
         local_vars = []
+
+        # is_async = None means autodetect
+        if is_async is None:
+            is_async = any(iscoroutinefunction(factory) for factory, _ in dep_tree)
         # All non-parameter deps become local vars.
         for factory, deps in dep_tree[:-1]:
-            if not deps:
+            if not deps and not iscoroutinefunction(factory):
                 local_vars.append(LocalVarConstant(factory, factory()))
             else:
+                if not is_async and iscoroutinefunction(factory):
+                    raise Exception(
+                        f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
+                    )
+                deps = [
+                    dep.factory if isinstance(dep, FactoryDep) else dep for dep in deps
+                ]
                 local_vars.append(
                     LocalVarFactory(
                         factory,
-                        [
-                            dep.factory if isinstance(dep, FactoryDep) else dep
-                            for dep in deps
-                        ],
+                        deps,
                     )
                 )
 
@@ -214,15 +165,7 @@ class Incanter:
                         )
             outer_args.append(ParameterDep(arg_name, arg_type))
 
-        return _compile_fn(fn, outer_args, local_vars)
-
-    def parameters(self, fn: Callable) -> Mapping[str, Parameter]:
-        """Return the signature needed to successfully and exactly invoke `fn`."""
-        return signature(self._gen_fn(fn)).parameters
-
-    def register_hook(self, predicate: Callable[[str, Any], bool], factory: Callable):
-        self.hook_registry.append((predicate, factory))
-        self._gen_fn.cache_clear()
+        return _compile_fn(fn, outer_args, local_vars, is_async=is_async)
 
 
 def _generate_unique_filename(func_name, reserve=True):
@@ -258,3 +201,79 @@ def _reconcile_types(type_a, type_b):
     if type_b is Signature.empty:
         return type_a
     raise Exception(f"Unable to reconcile types {type_a!r} and {type_b!r}")
+
+
+def _compile_fn(
+    fn,
+    outer_args: list[ParameterDep],
+    local_vars: list[LocalVar],
+    is_async: bool = False,
+) -> Callable:
+    # Some arguments need to be taken from outside.
+    # Some arguments need to be calculated from factories.
+    fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
+    globs = {"_incant_inner_fn": fn}
+    arg_lines = []
+    for dep in outer_args:
+        if dep.type is not Signature.empty:
+            arg_type_snippet = f": _incant_arg_{dep.arg_name}"
+            globs[f"_incant_arg_{dep.arg_name}"] = dep.type
+        else:
+            arg_type_snippet = ""
+
+        arg_lines.append(f"{dep.arg_name}{arg_type_snippet}")
+    outer_arg_names = {o.arg_name for o in outer_args}
+
+    lines = []
+    if is_async:
+        lines.append(f"async def {fn_name}({', '.join(arg_lines)}):")
+    else:
+        lines.append(f"def {fn_name}({', '.join(arg_lines)}):")
+    local_vars_ix_by_factory = {
+        local_var.factory: ix for ix, local_var in enumerate(local_vars)
+    }
+    for i, local_var in enumerate(local_vars):
+        local_name = f"_incant_local_{i}"
+        if isinstance(local_var, LocalVarConstant):
+            local_var_local_val = f"_incant_local_val_{i}"
+            lines.append(f"  {local_name} = {local_var_local_val}")
+            globs[local_var_local_val] = local_var.value
+        else:
+            local_var_factory = f"_incant_local_factory_{i}"
+            globs[local_var_factory] = local_var.factory
+            local_arg_lines = []
+            for local_arg in local_var.args:
+                if isinstance(local_arg, ParameterDep):
+                    local_arg_lines.append(local_arg.arg_name)
+                else:
+                    local_arg_lines.append(
+                        f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
+                    )
+            aw = ""
+            if iscoroutinefunction(local_var.factory):
+                aw = "await "
+            lines.append(
+                f"  {local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
+            )
+
+    incant_arg_lines = []
+    local_var_ix = len(local_vars) - 1
+    for name in signature(fn).parameters:
+        if name in outer_arg_names:
+            incant_arg_lines.append(name)
+        else:
+            incant_arg_lines.append(f"_incant_local_{local_var_ix}")
+            local_var_ix -= 1
+
+    aw = ""
+    if iscoroutinefunction(fn):
+        aw = "await "
+    lines.append(f"  return {aw}_incant_inner_fn({', '.join(incant_arg_lines)})")
+
+    script = "\n".join(lines)
+
+    fname = _generate_unique_filename(fn.__name__)
+    eval(compile(script, fname, "exec"), globs)
+
+    fn = globs[fn_name]
+    return fn
