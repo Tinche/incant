@@ -2,11 +2,21 @@ import linecache
 import uuid
 
 from collections.abc import Mapping
+from contextlib import AbstractAsyncContextManager
 from functools import lru_cache
-from inspect import Parameter, Signature, iscoroutinefunction, signature
+from inspect import (
+    Parameter,
+    Signature,
+    isasyncgenfunction,
+    iscoroutinefunction,
+    signature,
+)
 from typing import Any, Awaitable, Callable, Optional, Type, TypeVar, Union
 
 from attr import Factory, define
+
+
+_type = type
 
 
 R = TypeVar("R")
@@ -86,12 +96,16 @@ class Incanter:
         """Return the signature needed to successfully and exactly invoke `fn`."""
         return signature(self._gen_fn(fn, is_async=None)).parameters
 
-    def register_by_name(self, fn: Callable, name: Optional[str] = None):
+    def register_by_name(self, fn: Optional[Callable], name: Optional[str] = None):
         """
-        Register a factory to be injected by name.
+        Register a factory to be injected by name. Can also be used as a decorator.
 
         If the name is not provided, the name of the factory will be used.
         """
+        if fn is None:
+            # Decorator
+            return lambda fn: self.register_by_name(fn, name=name)
+
         if name is None:
             name = fn.__name__
         self.register_hook(lambda n, _: n == name, fn)
@@ -104,10 +118,13 @@ class Incanter:
         factory will be used.
         """
         if type is None:
-            sig = signature(fn)
-            type = sig.return_annotation
-            if type is Signature.empty:
-                raise Exception("No return type found, provide a type.")
+            if fn.__class__ is _type:
+                type = fn
+            else:
+                sig = signature(fn)
+                type = sig.return_annotation
+                if type is Signature.empty:
+                    raise Exception("No return type found, provide a type.")
         self.register_hook(lambda _, t: issubclass(t, type), fn)
 
     def register_hook(self, predicate: Callable[[str, Any], bool], factory: Callable):
@@ -125,6 +142,9 @@ class Incanter:
                 sig = signature(node)
                 dependents = []
                 for name, param in sig.parameters.items():
+                    if node is not fn and param.default is not Signature.empty:
+                        # Do not expose optional params of dependencies.
+                        continue
                     param_type = param.annotation
                     for predicate, factory in self.hook_registry:
                         if predicate(name, param_type):
@@ -147,7 +167,11 @@ class Incanter:
             is_async = any(iscoroutinefunction(factory) for factory, _ in dep_tree)
         # All non-parameter deps become local vars.
         for factory, deps in dep_tree[:-1]:
-            if not deps and not iscoroutinefunction(factory):
+            if (
+                not deps
+                and not iscoroutinefunction(factory)
+                and not _is_async_context_manager(factory)
+            ):
                 local_vars.append(LocalVarConstant(factory, factory()))
             else:
                 if not is_async and iscoroutinefunction(factory):
@@ -256,6 +280,7 @@ def _compile_fn(
     local_vars_ix_by_factory = {
         local_var.factory: ix for ix, local_var in enumerate(local_vars)
     }
+    ind = 0  # Indentation level
     for i, local_var in enumerate(local_vars):
         local_name = f"_incant_local_{i}"
         if isinstance(local_var, LocalVarConstant):
@@ -273,12 +298,18 @@ def _compile_fn(
                     local_arg_lines.append(
                         f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
                     )
-            aw = ""
-            if iscoroutinefunction(local_var.factory):
-                aw = "await "
-            lines.append(
-                f"  {local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
-            )
+            if _is_async_context_manager(local_var.factory):
+                lines.append(
+                    f"  {' ' * ind}async with {local_var_factory}({', '.join(local_arg_lines)}) as {local_name}:"
+                )
+                ind += 2
+            else:
+                aw = ""
+                if iscoroutinefunction(local_var.factory):
+                    aw = "await "
+                lines.append(
+                    f"  {' ' * ind}{local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
+                )
 
     incant_arg_lines = []
     local_var_ix = len(local_vars) - 1
@@ -292,7 +323,9 @@ def _compile_fn(
     aw = ""
     if iscoroutinefunction(fn):
         aw = "await "
-    lines.append(f"  return {aw}_incant_inner_fn({', '.join(incant_arg_lines)})")
+    lines.append(
+        f"  {' ' * ind}return {aw}_incant_inner_fn({', '.join(incant_arg_lines)})"
+    )
 
     script = "\n".join(lines)
 
@@ -301,3 +334,9 @@ def _compile_fn(
 
     fn = globs[fn_name]
     return fn
+
+
+def _is_async_context_manager(fn: Callable) -> bool:
+    return (fn.__class__ is _type and issubclass(fn, AbstractAsyncContextManager)) or (
+        (wrapped := getattr(fn, "__wrapped__", None)) and isasyncgenfunction(wrapped)
+    )
