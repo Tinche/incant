@@ -52,8 +52,8 @@ class Incanter:
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
         return self._gen_fn(fn)(*args, **kwargs)
 
-    async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
-        return await self._gen_fn(fn, True)(*args, **kwargs)
+    def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> Awaitable[R]:
+        return self._gen_fn(fn, True)(*args, **kwargs)
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
