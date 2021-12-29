@@ -3,6 +3,8 @@ from inspect import Parameter
 
 import pytest
 
+from attr import define
+
 from incant import Incanter
 
 
@@ -106,3 +108,21 @@ def test_shared_deps_incompatible(incanter: Incanter):
 
     with pytest.raises(Exception):
         incanter.invoke(func, 5.0)
+
+
+def test_class_deps(incanter: Incanter):
+    @define
+    class Dep:
+        a: int
+
+    incanter.register_hook(lambda n, _: n == "dep", Dep)
+    assert incanter.invoke(lambda dep: dep.a + 1, a=1)
+
+    assert incanter.parameters(lambda dep: dep.a + 1) == OrderedDict(
+        [
+            (
+                "a",
+                Parameter("a", Parameter.POSITIONAL_OR_KEYWORD, annotation=int),
+            ),
+        ]
+    )

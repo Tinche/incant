@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Mapping
 from functools import lru_cache
 from inspect import Parameter, Signature, iscoroutinefunction, signature
-from typing import Any, Awaitable, Callable, Optional, TypeVar, Union
+from typing import Any, Awaitable, Callable, Optional, Type, TypeVar, Union
 
 from attr import Factory, define
 
@@ -86,8 +86,32 @@ class Incanter:
         """Return the signature needed to successfully and exactly invoke `fn`."""
         return signature(self._gen_fn(fn, is_async=None)).parameters
 
+    def register_by_name(self, fn: Callable, name: Optional[str] = None):
+        """
+        Register a factory to be injected by name.
+
+        If the name is not provided, the name of the factory will be used.
+        """
+        if name is None:
+            name = fn.__name__
+        self.register_hook(lambda n, _: n == name, fn)
+
+    def register_by_type(self, fn: Callable, type: Optional[Type] = None):
+        """
+        Register a factory to be injected by type.
+
+        If the type is not provided, the return annotation from the
+        factory will be used.
+        """
+        if type is None:
+            sig = signature(fn)
+            type = sig.return_annotation
+            if type is Signature.empty:
+                raise Exception("No return type found, provide a type.")
+        self.register_hook(lambda _, t: issubclass(t, type), fn)
+
     def register_hook(self, predicate: Callable[[str, Any], bool], factory: Callable):
-        self.hook_registry.append((predicate, factory))
+        self.hook_registry.insert(0, (predicate, factory))
         self._gen_fn.cache_clear()
 
     def _gen_dep_tree(self, fn: Callable) -> list[tuple[Callable, list[Dep]]]:
