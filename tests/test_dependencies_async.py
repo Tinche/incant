@@ -66,7 +66,11 @@ async def test_async_ctx_manager_dep(incanter: Incanter):
         yield 1
         exited = True
 
-    assert (await incanter.ainvoke(lambda dep1: dep1 + 1)) == 2
+    async def fn(dep1: int) -> int:
+        nonlocal entered
+        return dep1 + 1
+
+    assert (await incanter.ainvoke(fn)) == 2
 
     assert entered
     assert exited
