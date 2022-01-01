@@ -21,10 +21,9 @@ async def test_async_invoke(incanter: Incanter):
 
 @pytest.mark.asyncio
 async def test_async_dep(incanter: Incanter):
+    @incanter.register_by_name
     async def dep1() -> int:
         return 1
-
-    incanter.register_hook(lambda n, _: n == "dep1", dep1)
 
     with pytest.raises(Exception):
         incanter.invoke(lambda dep1: dep1 + 1) == 2
@@ -35,14 +34,13 @@ async def test_async_dep(incanter: Incanter):
 
 @pytest.mark.asyncio
 async def test_async_mixed_dep(incanter: Incanter):
+    @incanter.register_by_name
     async def dep1(dep2) -> int:
         return dep2 + 1
 
-    def dep2(input: int) -> int:
+    @incanter.register_by_name(name="dep2")
+    def _(input: int) -> int:
         return input + 1
-
-    incanter.register_hook(lambda n, _: n == "dep1", dep1)
-    incanter.register_hook(lambda n, _: n == "dep2", dep2)
 
     with pytest.raises(Exception):
         incanter.invoke(lambda dep1: dep1 + 1, 1)

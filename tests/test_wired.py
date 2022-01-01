@@ -22,7 +22,7 @@ def test_greeter(incanter: Incanter):
             return f"{self.greeting} !!"
 
     greeter = Greeter(greeting="Hello")
-    incanter.register_hook(lambda _, t: t is Greeter, lambda: greeter)
+    incanter.register_hook(lambda p: p.annotation is Greeter, lambda: greeter)
 
     def greet_a_customer(greeter: Greeter) -> str:
         return greeter()
@@ -40,7 +40,9 @@ def test_greeter_factory(incanter: Incanter):
         def __call__(self) -> str:
             return f"{self.greeting} !!"
 
-    incanter.register_hook(lambda _, t: t is Greeter, lambda: Greeter(greeting="Hello"))
+    incanter.register_hook(
+        lambda p: p.annotation is Greeter, lambda: Greeter(greeting="Hello")
+    )
 
     def greet_a_customer(greeter: Greeter) -> str:
         return greeter()
@@ -73,7 +75,7 @@ def test_greeter_settings():
         def greeter_factory() -> Greeter:
             return Greeter(greeting="Hello", punctuation=punctuation)
 
-        incanter.register_hook(lambda _, t: t is Greeter, greeter_factory)
+        incanter.register_hook(lambda p: p.annotation is Greeter, greeter_factory)
         return incanter
 
     settings = Settings(punctuation="!!")
@@ -99,11 +101,11 @@ def test_greeter_settings_idiomatic(incanter: Incanter):
     def greet_a_customer(greeter: Greeter) -> str:
         return greeter()
 
+    @incanter.register_by_type
     def greeter_factory(punctuation: str) -> Greeter:
         return Greeter(greeting="Hello", punctuation=punctuation)
 
-    incanter.register_hook(lambda _, t: t is Greeter, greeter_factory)
-    incanter.register_hook(lambda n, _: n == "punctuation", lambda: "!!")
+    incanter.register_hook(lambda p: p.name == "punctuation", lambda: "!!")
 
     assert incanter.invoke(greet_a_customer) == "Hello !!"
 
@@ -137,7 +139,7 @@ def test_greeter_contexts(incanter: Incanter):
     def greet_a_customer(customer: Customer, greeter: Greeter):
         return greeter(customer)
 
-    incanter.register_by_name(lambda: "!!", "punctuation")
+    incanter.register_by_name(lambda: "!!", name="punctuation")
     incanter.register_by_type(
         lambda customer, punctuation: FrenchGreeter(punctuation)
         if isinstance(customer, FrenchCustomer)
@@ -168,7 +170,7 @@ def test_greeter_decoupled(incanter: Incanter):
         def __call__(self, customer: Customer) -> str:
             return f"{self.greeting} {customer.name} {self.punctuation}"
 
-    incanter.register_by_name(lambda: "!!", "punctuation")
+    incanter.register_by_name(lambda: "!!", name="punctuation")
 
     customer_types_to_greeters = defaultdict(lambda: Greeter)
 
@@ -221,7 +223,7 @@ def test_greeter_datastore(incanter: Incanter):
             return f"{self.greeting} {customer.name} {self.punctuation}"
 
     datastore = Datastore()
-    incanter.register_by_name(lambda: "!!", "punctuation")
+    incanter.register_by_name(lambda: "!!", name="punctuation")
     incanter.register_by_type(lambda: datastore, Datastore)
 
     customer_types_to_greeters = defaultdict(lambda: Greeter)

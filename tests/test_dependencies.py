@@ -18,15 +18,15 @@ def test_simple_dep(incanter: Incanter):
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
     }
 
-    incanter.register_hook(lambda n, _: n == "dep1", lambda: 2)
+    incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
     assert incanter.invoke(func) == 3
 
     assert incanter.parameters(func) == {}
 
 
 def test_nested_deps(incanter: Incanter):
-    incanter.register_hook(lambda n, _: n == "dep1", lambda dep2: dep2 + 1)
-    incanter.register_hook(lambda n, _: n == "dep2", lambda: 2)
+    incanter.register_hook(lambda p: p.name == "dep1", lambda dep2: dep2 + 1)
+    incanter.register_hook(lambda p: p.name == "dep2", lambda: 2)
 
     def func(dep1):
         return dep1 + 1
@@ -37,9 +37,9 @@ def test_nested_deps(incanter: Incanter):
 
 def test_nested_partial_deps(incanter: Incanter):
     incanter.register_hook(
-        lambda n, _: n == "dep1", lambda dep2, input: dep2 + input + 1
+        lambda p: p.name == "dep1", lambda dep2, input: dep2 + input + 1
     )
-    incanter.register_hook(lambda n, _: n == "dep2", lambda: 2)
+    incanter.register_hook(lambda p: p.name == "dep2", lambda: 2)
 
     def func(dep1):
         return dep1 + 1
@@ -52,9 +52,9 @@ def test_nested_partial_deps(incanter: Incanter):
 
 def test_nested_partial_deps_with_args(incanter: Incanter):
     incanter.register_hook(
-        lambda n, _: n == "dep1", lambda dep2, input: dep2 + input + 1
+        lambda p: p.name == "dep1", lambda dep2, input: dep2 + input + 1
     )
-    incanter.register_hook(lambda n, _: n == "dep2", lambda: 2)
+    incanter.register_hook(lambda p: p.name == "dep2", lambda: 2)
 
     def func(dep1, input2: float) -> float:
         return dep1 + 1 + input2
@@ -73,9 +73,9 @@ def test_nested_partial_deps_with_args(incanter: Incanter):
 
 def test_shared_deps(incanter: Incanter):
     incanter.register_hook(
-        lambda n, _: n == "dep1", lambda dep2, input: dep2 + input + 1
+        lambda p: p.name == "dep1", lambda dep2, input: dep2 + input + 1
     )
-    incanter.register_hook(lambda n, _: n == "dep2", lambda: 2)
+    incanter.register_hook(lambda p: p.name == "dep2", lambda: 2)
 
     def func(dep1, input: float) -> float:
         return dep1 + 1 + input
@@ -97,8 +97,8 @@ def test_shared_deps_incompatible(incanter: Incanter):
     def dep1(dep2, input: str) -> str:
         return dep2 + input + "1"
 
-    incanter.register_hook(lambda n, _: n == "dep1", dep1)
-    incanter.register_hook(lambda n, _: n == "dep2", lambda: 2)
+    incanter.register_hook(lambda p: p.name == "dep1", dep1)
+    incanter.register_hook(lambda p: p.name == "dep2", lambda: 2)
 
     def func(dep1, input: float) -> float:
         return dep1 + 1 + input
@@ -115,7 +115,7 @@ def test_class_deps(incanter: Incanter):
     class Dep:
         a: int
 
-    incanter.register_hook(lambda n, _: n == "dep", Dep)
+    incanter.register_hook(lambda p: p.name == "dep", Dep)
     assert incanter.invoke(lambda dep: dep.a + 1, a=1)
 
     assert incanter.parameters(lambda dep: dep.a + 1) == OrderedDict(

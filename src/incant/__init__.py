@@ -50,11 +50,12 @@ class LocalVarFactory:
 
 
 LocalVar = Union[LocalVarConstant, LocalVarFactory]
+PredicateFn = Callable[[Parameter], bool]
 
 
 @define(slots=False)
 class Incanter:
-    hook_registry: list = Factory(list)
+    hook_registry: list[tuple[PredicateFn, Callable]] = Factory(list)
 
     def __attrs_post_init__(self):
         self._gen_fn = lru_cache(None)(self._gen_fn)
@@ -92,11 +93,42 @@ class Incanter:
                 raise TypeError(f"Cannot fulfil argument {arg_name}")
         return prepared_fn(*prepared_args, **prepared_kwargs)
 
+    async def aincant(
+        self, fn: Callable[..., Awaitable[R]], *args, **kwargs
+    ) -> Awaitable[R]:
+        """Invoke async `fn` the best way we can."""
+        prepared_fn = self._gen_fn(fn, is_async=True)
+        pos_args_by_type = {a.__class__: a for a in args}
+        kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
+        prepared_args = []
+        prepared_kwargs = {}
+        sig = signature(prepared_fn)
+        for arg_name, arg in sig.parameters.items():
+            if (
+                arg.annotation is not Signature.empty
+                and (arg_name, arg.annotation) in kwargs_by_name_and_type
+            ):
+                prepared_args.append(
+                    kwargs_by_name_and_type[(arg_name, arg.annotation)]
+                )
+            elif (
+                arg.annotation is not Signature.empty
+                and arg.annotation in pos_args_by_type
+            ):
+                prepared_args.append(pos_args_by_type[arg.annotation])
+            elif arg_name in kwargs:
+                prepared_args.append(kwargs[arg_name])
+            else:
+                raise TypeError(f"Cannot fulfil argument {arg_name}")
+        return await prepared_fn(*prepared_args, **prepared_kwargs)
+
     def parameters(self, fn: Callable) -> Mapping[str, Parameter]:
         """Return the signature needed to successfully and exactly invoke `fn`."""
         return signature(self._gen_fn(fn, is_async=None)).parameters
 
-    def register_by_name(self, fn: Optional[Callable], name: Optional[str] = None):
+    def register_by_name(
+        self, fn: Optional[Callable] = None, *, name: Optional[str] = None
+    ):
         """
         Register a factory to be injected by name. Can also be used as a decorator.
 
@@ -108,11 +140,11 @@ class Incanter:
 
         if name is None:
             name = fn.__name__
-        self.register_hook(lambda n, _: n == name, fn)
+        self.register_hook(lambda p: p.name == name, fn)
 
-    def register_by_type(self, fn: Callable, type: Optional[Type] = None):
+    def register_by_type(self, fn: Optional[Callable], type: Optional[Type] = None):
         """
-        Register a factory to be injected by type.
+        Register a factory to be injected by type. Can also be used as a decorator.
 
         If the type is not provided, the return annotation from the
         factory will be used.
@@ -125,9 +157,9 @@ class Incanter:
                 type = sig.return_annotation
                 if type is Signature.empty:
                     raise Exception("No return type found, provide a type.")
-        self.register_hook(lambda _, t: issubclass(t, type), fn)
+        self.register_hook(lambda p: issubclass(p.annotation, type), fn)
 
-    def register_hook(self, predicate: Callable[[str, Any], bool], factory: Callable):
+    def register_hook(self, predicate: PredicateFn, factory: Callable):
         self.hook_registry.insert(0, (predicate, factory))
         self._gen_fn.cache_clear()
 
@@ -147,7 +179,7 @@ class Incanter:
                         continue
                     param_type = param.annotation
                     for predicate, factory in self.hook_registry:
-                        if predicate(name, param_type):
+                        if predicate(param):
                             # Match!
                             to_process.append(factory)
                             dependents.append(FactoryDep(factory, name))
