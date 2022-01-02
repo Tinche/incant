@@ -19,6 +19,7 @@ incant: a little magic for your functions
 Going by the old, humorous adage that dependency injection is simply passing arguments to functions, `incant` is a toolkit that is well suited to that use case.
 
 `incant` includes support for:
+
 * matching dependencies by anything in `inspect.Parameter`, including the parameter name, type annotation and default value
 * convenient APIs for matching by parameter name and type annotation
 * sync and async functions and dependencies
@@ -59,7 +60,7 @@ Let's demonstrate the use of `incant` with a hypothetical scenario.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
 You don't have to do it from scratch though, so you choose (essentially at random) an existing framework: Quart (Quart is an async version of Flask).
 Pretty much any other framework (sync or async) would have also worked; other implementations are left as an exercise to the reader.
-You decide to call this framework `IncantAPI`.
+You decide to call this framework `QuickAPI`.
 
 Simple Quart handlers are very easy to write, so your colleagues are quick to get started:
 
