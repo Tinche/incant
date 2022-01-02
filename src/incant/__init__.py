@@ -55,7 +55,7 @@ PredicateFn = Callable[[Parameter], bool]
 
 @define(slots=False)
 class Incanter:
-    hook_registry: list[tuple[PredicateFn, Callable]] = Factory(list)
+    hook_factory_registry: list[tuple[PredicateFn, Callable]] = Factory(list)
 
     def __attrs_post_init__(self):
         self._gen_fn = lru_cache(None)(self._gen_fn)
@@ -160,7 +160,10 @@ class Incanter:
         self.register_hook(lambda p: issubclass(p.annotation, type), fn)
 
     def register_hook(self, predicate: PredicateFn, factory: Callable):
-        self.hook_registry.insert(0, (predicate, factory))
+        self.register_hook_factory(predicate, lambda _: factory)
+
+    def register_hook_factory(self, predicate: PredicateFn, hook_factory: Callable):
+        self.hook_factory_registry.insert(0, (predicate, hook_factory))
         self._gen_fn.cache_clear()
 
     def _gen_dep_tree(self, fn: Callable) -> list[tuple[Callable, list[Dep]]]:
@@ -178,9 +181,10 @@ class Incanter:
                         # Do not expose optional params of dependencies.
                         continue
                     param_type = param.annotation
-                    for predicate, factory in self.hook_registry:
+                    for predicate, hook_factory in self.hook_factory_registry:
                         if predicate(param):
                             # Match!
+                            factory = hook_factory(param)
                             to_process.append(factory)
                             dependents.append(FactoryDep(factory, name))
                             break
