@@ -70,7 +70,7 @@ Simple Dependencies
 
 After a while, your colleague says they require the IP address for the incoming request.
 You explain the Quart API for this (``request.remote_addr``), but your colleague is adamant about following best practices (avoiding global variables) - they want it as an argument to their handler.
-They also want it as an instance of Python's `ipaddress.IPv4Address`. Their handler looks like this:
+They also want it as an instance of Python's ``ipaddress.IPv4Address``. Their handler looks like this:
 
 .. code-block:: python
 
@@ -79,6 +79,7 @@ They also want it as an instance of Python's `ipaddress.IPv4Address`. Their hand
         return f"Your address is {source_ip}"
 
 Well, looks like you've got your work cut out for you.
+
 At the top of the file, you import and prepare an ``incant.Incanter`` instance.
 
 .. code-block:: python
@@ -99,11 +100,13 @@ You decide to write a function to get the address from the request, and to regis
         # In Quart (like in Flask), the request is accessed through a global proxy
         return IPv4Address(request.remote_addr)
 
-This means any function invoked through the `Incanter` will have any parameters annotated as `IPv4Address` satisfied by calling the `get_ip_address` dependency factory.
+This means any function invoked through the `Incanter` will have any parameters annotated as ``IPv4Address`` satisfied by calling the ``get_ip_address`` dependency factory.
 
-You contemplate how to get this information to the `ip_address_handler`, and choose to write a simple decorator (yay Python!).
+You contemplate how to get this information to the ``ip_address_handler``, and choose to write a simple decorator (yay Python!).
 Your colleague agrees, but (citing consistency) wants the decorator to be applied to all handlers.
-You could solve this more elegantly by subclassing the ``quart.Quart`` class, but forgo this as this is an `incant` tutorial, not a Quart one.
+
+(You could solve this more elegantly by subclassing the ``quart.Quart`` class, but forgo this as this is an `incant` tutorial, not a Quart one.)
+
 You rub your hands and mutter "Let's roll" to yourself.
 
 .. code-block:: python
@@ -117,7 +120,7 @@ You rub your hands and mutter "Let's roll" to yourself.
 
         return wrapper
 
-`incanter.ainvoke` (the async version of `invoke`) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
+``incanter.ainvoke`` (the async version of ``invoke``) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
 
 Then you just apply the decorators to both existing handlers.
 
@@ -169,7 +172,8 @@ You change the ``quickapi`` decorator to create and use a logger with the curren
 
 You can't make the logger a dependency within the ``Incanter`` though, since it depends on handler-specific data.
 (You could have a separate incanter for each handler, but that's very inefficient.)
-If the incanter cannot find a dependency to fulfil a parameter, it'll just make the function require it when invoked.
+
+If the incanter cannot find a dependency to fulfil a parameter, you need to provide it yourself.
 Since the ``index`` and ``ip_address_handler`` don't require the logger, we can keep invoking them as before.
 However, the ``logging_handler`` handler requires it. Without changes, invoking the handler will let you know:
 
