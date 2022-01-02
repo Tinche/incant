@@ -30,9 +30,13 @@ Going by the old, humorous adage that dependency injection is simply passing arg
 * a method for registering dependencies: ``Incanter.register_hook()``, and a number of higher level, more user-friendly aliases
 * methods for invoking arbitrary functions while injecting dependencies: ``Incanter.invoke()`` and its async variant, ``Incanter.ainvoke()``
 * a method for getting the parameters of an arbitrary function after injecting dependencies: ``Incanter.parameters()``
-* a method for invoking arbitrary functions while injecting dependencies and required arguments: ``Incanter.incant``
+* methods for invoking arbitrary functions while injecting dependencies and forwarding any required arguments: ``Incanter.incant`` and its async variant, ``Incanter.aincant``
 
 The tutorial section below contains a walkthough and some real-life use cases of `incant`.
+
+An easy way to remember the difference between ``invoke`` and ``incant`` - ``incant`` is more magical, like a magical incantation.
+
+If you're coming from a `pytest` background, `incant` dependency factories are roughly equivalent to `pytest` fixtures.
 
 Installation
 ------------
@@ -196,13 +200,13 @@ You change the ``quickapi`` decorator to use ``Incanter.aincant`` (the async ver
 
         return wrapper
 
-Since you're passing in the logger using ``kwargs``, it will match (after trying name+type) any parameter named `log`.
+Since you're passing in the logger using ``kwargs``, it will match (after trying name+type) any parameter named ``log``.
 
 Nested Dependencies
 ~~~~~~~~~~~~~~~~~~~
 
 A colleague is working on an authentication system for your product.
-They have a function that takes a cookie (named `session_token`) and produces an instance of your user model.
+They have a function that takes a cookie (named ``session_token``) and produces an instance of your user model.
 
 .. code-block:: python
 
@@ -243,12 +247,14 @@ You define a dependency factory for the session token cookie:
 
 Because of how ``request.cookies`` works on Quart, this handler will respond with ``400`` if the cookie is not present, or run the handler otherwise.
 But only for the handlers that require the ``User`` dependency.
+
 Pretty cool!
 
 Complex Rules
 ~~~~~~~~~~~~~
 
 Another day, another feature request.
+
 A colleague wants to receive instances of `attrs` classes, deserialized from JSON in the request body.
 An example:
 
@@ -266,8 +272,9 @@ An example:
 
 They want this to work for *any* `attrs` class.
 You know you can reach for the `cattrs` library to load an attrs class from JSON, but the dependency hook is a little more complex.
-Because the dependency hook needs to work for *any* `attrs` class, you need to use `incanter.register_hook_factory`, the most powerful but lowest level hook registration method.
-`incanter.register_hook_factory` is, like the name says, a factory for hooks.
+Because the dependency hook needs to work for *any* `attrs` class, you need to use ``incanter.register_hook_factory``, the most powerful but lowest level hook registration method.
+
+``incanter.register_hook_factory`` is for, like the name says, factories of dependency hooks.
 It will produce a different dependency hook for each `attrs` class we encounter, which is what we need.
 
 .. code-block:: python
@@ -291,7 +298,7 @@ It will produce a different dependency hook for each `attrs` class we encounter,
         lambda p: has(p.annotation), lambda p: make_attrs_payload_factory(p.annotation)
     )
 
-This will also return a `400` status code if the payload cannot be properly loaded.
+This will also return a ``400`` status code if the payload cannot be properly loaded.
 
 Because of how `incant` evaluates dependency rules (newest first), this hook factory needs to be registered before the ``current_user`` dependency factory.
 Otherwise, since our ``User`` model is also an `attrs` class, `incant` would try loading it from the request body instead of getting it from the ``current_user`` dependency factory.
