@@ -27,6 +27,7 @@ Going by the old, humorous adage that dependency injection is simply passing arg
 * no global state
 
 `incant` has a very lean API surface, the core API being:
+
 * a single class, ``incant.Incanter``, for keeping state (dependency rules)
 * a method for registering dependencies: ``Incanter.register_hook()``, and a number of higher level, more user-friendly aliases
 * methods for invoking arbitrary functions while injecting dependencies: ``Incanter.invoke()`` and its async variant, ``Incanter.ainvoke()``
