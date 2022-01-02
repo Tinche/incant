@@ -59,11 +59,11 @@ You decide to call this framework `IncantAPI`.
 
 Simple Quart handlers are very easy to write, so your colleagues are quick to get started:
 
-```
-@app.get("/")
-async def index():
-    return "OK"
-```
+.. code-block:: python
+
+    @app.get("/")
+    async def index():
+        return "OK"
 
 Simple Dependencies
 ~~~~~~~~~~~~~~~~~~~
@@ -72,31 +72,32 @@ After a while, your colleague says they require the IP address for the incoming 
 You explain the Quart API for this (``request.remote_addr``), but your colleague is adamant about following best practices (avoiding global variables) - they want it as an argument to their handler.
 They also want it as an instance of Python's `ipaddress.IPv4Address`. Their handler looks like this:
 
-```
-@app.get("/ip")
-async def ip_address_handler(source_ip: IPv4Address) -> str:
-    return f"Your address is {source_ip}"
-```
+.. code-block:: python
+
+    @app.get("/ip")
+    async def ip_address_handler(source_ip: IPv4Address) -> str:
+        return f"Your address is {source_ip}"
 
 Well, looks like you've got your work cut out for you.
 At the top of the file, you import and prepare an ``incant.Incanter`` instance.
 
-```
-from incant import Incanter
+.. code-block:: python
 
-incanter = Incanter()
-```
+    from incant import Incanter
+
+    incanter = Incanter()
 
 You decide to write a function to get the address from the request, and to register it with your Incanter to be matched by type.
-```
-from ipaddress import IPv4Address
-from quart import request
 
-@incanter.register_by_type
-def get_ip_address() -> IPv4Address:
-    # In Quart (like in Flask), the request is accessed through a global proxy
-    return IPv4Address(request.remote_addr)
-```
+.. code-block:: python
+
+    from ipaddress import IPv4Address
+    from quart import request
+
+    @incanter.register_by_type
+    def get_ip_address() -> IPv4Address:
+        # In Quart (like in Flask), the request is accessed through a global proxy
+        return IPv4Address(request.remote_addr)
 
 This means any function invoked through the `Incanter` will have any parameters annotated as `IPv4Address` satisfied by calling the `get_ip_address` dependency factory.
 
@@ -105,26 +106,27 @@ Your colleague agrees, but (citing consistency) wants the decorator to be applie
 You could solve this more elegantly by subclassing the ``quart.Quart`` class, but forgo this as this is an `incant` tutorial, not a Quart one.
 You rub your hands and mutter "Let's roll" to yourself.
 
-```
-from functools import wraps
+.. code-block:: python
 
-def quickapi(handler):
-    @wraps(handler)
-    async def wrapper():
-        return await incanter.ainvoke(handler)
+    from functools import wraps
 
-    return wrapper
-```
+    def quickapi(handler):
+        @wraps(handler)
+        async def wrapper():
+            return await incanter.ainvoke(handler)
+
+        return wrapper
+
 `incanter.ainvoke` (the async version of `invoke`) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
 
 Then you just apply the decorators to both existing handlers.
 
-```
-@app.get("/ip")
-@quickapi
-async def ip_address_handler(source_ip: IPv4Address) -> str:
-    return f"Your address is {source_ip}"
-```
+.. code-block:: python
+
+    @app.get("/ip")
+    @quickapi
+    async def ip_address_handler(source_ip: IPv4Address) -> str:
+        return f"Your address is {source_ip}"
 
 Passing in Dependencies from the Outside
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,35 +137,35 @@ You think the proposal is well thought-out, and want to use the logger yourself 
 
 Here's what they want their handler to look like:
 
-```
-@app.get("/log")
-@quickapi
-async def logging_handler(log: BoundLogger) -> str:
-    log.info("Hello from the log handler")
-    return "Response after logging"
-```
+.. code-block:: python
+
+    @app.get("/log")
+    @quickapi
+    async def logging_handler(log: BoundLogger) -> str:
+        log.info("Hello from the log handler")
+        return "Response after logging"
 
 You reach for the trusty `structlog` library and set it up.
 
-```
-from structlog.stdlib import BoundLogger, get_logger
+.. code-block:: python
 
-logger = get_logger()  # Useful to have a module-scoped one first.
-```
+    from structlog.stdlib import BoundLogger, get_logger
+
+    logger = get_logger()  # Useful to have a module-scoped one first.
 
 You change the ``quickapi`` decorator to create and use a logger with the current handler name:
 
-```
-def quickapi(handler):
-    log = logger.bind(handler=handler.__name__)
+.. code-block:: python
 
-    @wraps(handler)
-    async def wrapper():
-        log.info("Processing")
-        return await incanter.ainvoke(handler)
+    def quickapi(handler):
+        log = logger.bind(handler=handler.__name__)
 
-    return wrapper
-```
+        @wraps(handler)
+        async def wrapper():
+            log.info("Processing")
+            return await incanter.ainvoke(handler)
+
+        return wrapper
 
 You can't make the logger a dependency within the ``Incanter`` though, since it depends on handler-specific data.
 (You could have a separate incanter for each handler, but that's very inefficient.)
@@ -171,24 +173,25 @@ If the incanter cannot find a dependency to fulfil a parameter, it'll just make 
 Since the ``index`` and ``ip_address_handler`` don't require the logger, we can keep invoking them as before.
 However, the ``logging_handler`` handler requires it. Without changes, invoking the handler will let you know:
 
-```
-TypeError: invoke_logging_handler() missing 1 required positional argument: 'log'
-```
+.. code-block:: python
+
+    TypeError: invoke_logging_handler() missing 1 required positional argument: 'log'
 
 You change the ``quickapi`` decorator to use ``Incanter.aincant`` (the async version of ``Incanter.incant``) and always pass in the logger instance.
 ``incant`` is meant for cases like this, forwarding the parameters if they are needed and skipping them otherwise.
 
-```
-def quickapi(handler):
-    log = logger.bind(handler=handler.__name__)
+.. code-block:: python
 
-    @wraps(handler)
-    async def wrapper():
-        log.info("Processing")
-        return await incanter.aincant(handler, log=log)
+    def quickapi(handler):
+        log = logger.bind(handler=handler.__name__)
 
-    return wrapper
-```
+        @wraps(handler)
+        async def wrapper():
+            log.info("Processing")
+            return await incanter.aincant(handler, log=log)
+
+        return wrapper
+
 Since you're passing in the logger using ``kwargs``, it will match (after trying name+type) any parameter named `log`.
 
 Nested Dependencies
@@ -197,42 +200,42 @@ Nested Dependencies
 A colleague is working on an authentication system for your product.
 They have a function that takes a cookie (named `session_token`) and produces an instance of your user model.
 
-```
-from attrs import define
+.. code-block:: python
 
-@define
-class User:
-    """The user model."""
-    username: str
+    from attrs import define
 
-async def current_user(session_token: str) -> User:
-    # Complex black magic goes here, immune to timing attacks.
-    return User("admin")
-```
+    @define
+    class User:
+        """The user model."""
+        username: str
+
+    async def current_user(session_token: str) -> User:
+        # Complex black magic goes here, immune to timing attacks.
+        return User("admin")
 
 They want to be able to use this user model in their handler.
 
-```
-@app.get("/user")
-@quickapi
-async def user_handler(user: User, log) -> str:
-    log.info("Chilling here", user=repr(user))
-    return "After the user handler"
-```
+.. code-block:: python
+
+    @app.get("/user")
+    @quickapi
+    async def user_handler(user: User, log) -> str:
+        log.info("Chilling here", user=repr(user))
+        return "After the user handler"
 
 You can use their ``current_user`` coroutine directly as a dependency factory:
 
-```
-incanter.register_by_type(current_user)
-```
+.. code-block:: python
+
+    incanter.register_by_type(current_user)
 
 but this still leaves the issue of getting the cookie from somewhere.
 You define a dependency factory for the session token cookie:
 
-```
-# We're using a lambda, so we pass in the `name` explicitly.
-incanter.register_by_name(lambda: request.cookies['session_token'], name="session_token")
-```
+.. code-block:: python
+
+    # We're using a lambda, so we pass in the `name` explicitly.
+    incanter.register_by_name(lambda: request.cookies['session_token'], name="session_token")
 
 Because of how ``request.cookies`` works on Quart, this handler will respond with ``400`` if the cookie is not present, or run the handler otherwise.
 But only for the handlers that require the ``User`` dependency.
@@ -245,17 +248,17 @@ Another day, another feature request.
 A colleague wants to receive instances of `attrs` classes, deserialized from JSON in the request body.
 An example:
 
-```
-@define
-class SamplePayload:
-    field: int
+.. code-block:: python
 
-@app.post("/payload")
-@quickapi
-async def attrs_handler(payload: SamplePayload, log) -> str:
-    log.info("Received payload", payload=repr(payload))
-    return "After payload"
-```
+    @define
+    class SamplePayload:
+        field: int
+
+    @app.post("/payload")
+    @quickapi
+    async def attrs_handler(payload: SamplePayload, log) -> str:
+        log.info("Received payload", payload=repr(payload))
+        return "After payload"
 
 They want this to work for *any* `attrs` class.
 You know you can reach for the `cattrs` library to load an attrs class from JSON, but the dependency hook is a little more complex.
@@ -263,26 +266,27 @@ Because the dependency hook needs to work for *any* `attrs` class, you need to u
 `incanter.register_hook_factory` is, like the name says, a factory for hooks.
 It will produce a different dependency hook for each `attrs` class we encounter, which is what we need.
 
-```
-from attrs import has
-from cattr import structure
-from werkzeug.exceptions import BadRequest
+.. code-block:: python
 
-def make_attrs_payload_factory(attrs_cls: type):
-    async def attrs_payload_factory():
-        json = await request.get_json(force=True)
-        try:
-            return structure(json, attrs_cls)
-        except Exception as e:
-            raise BadRequest() from e
+    from attrs import has
+    from cattr import structure
+    from werkzeug.exceptions import BadRequest
 
-    return attrs_payload_factory
+    def make_attrs_payload_factory(attrs_cls: type):
+        async def attrs_payload_factory():
+            json = await request.get_json(force=True)
+            try:
+                return structure(json, attrs_cls)
+            except Exception as e:
+                raise BadRequest() from e
+
+        return attrs_payload_factory
 
 
-incanter.register_hook_factory(
-    lambda p: has(p.annotation), lambda p: make_attrs_payload_factory(p.annotation)
-)
-```
+    incanter.register_hook_factory(
+        lambda p: has(p.annotation), lambda p: make_attrs_payload_factory(p.annotation)
+    )
+
 This will also return a `400` status code if the payload cannot be properly loaded.
 
 Because of how `incant` evaluates dependency rules (newest first), this hook factory needs to be registered before the ``current_user`` dependency factory.
