@@ -53,9 +53,9 @@ def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
     @wraps(handler)
-    async def wrapper():
+    async def wrapper(**kwargs):
         log.info("Processing")
-        return await incanter.aincant(handler, log=log)
+        return await incanter.aincant(handler, log=log, **kwargs)
 
     return wrapper
 
@@ -69,7 +69,6 @@ def get_ip_address() -> IPv4Address:
 @app.get("/")
 @quickapi
 async def index():
-    print(request.remote_addr)
     return "OK"
 
 
@@ -84,6 +83,12 @@ async def ip_address_handler(source_ip: IPv4Address) -> str:
 async def logging_handler(log: BoundLogger) -> str:
     log.info("Hello from the log handler")
     return "Response after logging"
+
+
+@app.get("/even-or-odd/<int:integer>")
+@quickapi
+async def even_or_odd_handler(integer: int) -> str:
+    return "odd" if integer % 2 != 0 else "even"
 
 
 @app.get("/user")

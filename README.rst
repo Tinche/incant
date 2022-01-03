@@ -15,12 +15,12 @@ incant: a little magic for your functions
 
 ----
 
-**incant** is an Apache 2 licensed library, written in Python, for composing and invoking functions.
+**incant** is an Apache 2-licensed library, written in Python, for composing and invoking functions.
 Going by the old, humorous adage that dependency injection is simply passing arguments to functions, `incant` is a toolkit that is well suited to that use case.
 
 `incant` includes support for:
 
-* matching dependencies by anything in `inspect.Parameter`, including the parameter name, type annotation and default value
+* matching dependencies by anything in ``inspect.Parameter``, including the parameter name, type annotation and default value
 * convenient APIs for matching by parameter name and type annotation
 * sync and async functions and dependencies
 * async context manager dependencies
@@ -74,7 +74,7 @@ Simple Quart handlers are very easy to write, so your colleagues are quick to ge
 Simple Dependencies
 ~~~~~~~~~~~~~~~~~~~
 
-After a while, your colleague says they require the IP address for the incoming request.
+After a while, your colleague says they require the IP address of the incoming request.
 You explain the Quart API for this (``request.remote_addr``), but your colleague is adamant about following best practices (avoiding global variables) - they want it as an argument to their handler.
 They also want it as an instance of Python's ``ipaddress.IPv4Address``. Their handler looks like this:
 
@@ -140,6 +140,32 @@ Then you just apply the decorators to both existing handlers.
 Passing in Dependencies from the Outside
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Some time later, another colleague approaches you asking for path variables to be provided to their handler.
+Their handler needs to look like this:
+
+.. code-block:: python
+
+    @app.get("/even-or-odd/<int:integer>")
+    @quickapi
+    async def even_or_odd_handler(integer: int) -> str:
+        return "odd" if integer % 2 != 0 else "even"
+
+Quart provides path parameters like this to handlers as ``kwargs``, so you modify the ``quickapi`` decorator a little:
+
+.. code-block:: python
+
+    def quickapi(handler):
+        @wraps(handler)
+        async def wrapper(**kwargs):
+            return await incanter.ainvoke(handler, **kwargs)
+
+        return wrapper
+
+The decorator simply receives them and passes them along to the handler. Another day of earning your keep!
+
+The Magic of ``incant``
+~~~~~~~~~~~~~~~~~~~~~~~
+
 Some time later, another colleague approaches you asking for a logger to be provided to their handler.
 They want to use structured logging, and they want the logger to already be bound with the name of the handler.
 You think the proposal is well thought-out, and want to use the logger yourself to log every request.
@@ -170,16 +196,16 @@ You change the ``quickapi`` decorator to create and use a logger with the curren
         log = logger.bind(handler=handler.__name__)
 
         @wraps(handler)
-        async def wrapper():
+        async def wrapper(**kwargs):
             log.info("Processing")
-            return await incanter.ainvoke(handler)
+            return await incanter.ainvoke(handler, **kwargs)
 
         return wrapper
 
 You can't make the logger a dependency within the ``Incanter`` though, since it depends on handler-specific data.
 (You could have a separate incanter for each handler, but that's very inefficient.)
 
-If the incanter cannot find a dependency to fulfil a parameter, you need to provide it yourself.
+If the incanter cannot find a dependency to fulfil a parameter, you need to provide it yourself - just like wiith the path parameters.
 Since the ``index`` and ``ip_address_handler`` don't require the logger, we can keep invoking them as before.
 However, the ``logging_handler`` handler requires it. Without changes, invoking the handler will let you know:
 
@@ -196,9 +222,9 @@ You change the ``quickapi`` decorator to use ``Incanter.aincant`` (the async ver
         log = logger.bind(handler=handler.__name__)
 
         @wraps(handler)
-        async def wrapper():
+        async def wrapper(**kwargs):
             log.info("Processing")
-            return await incanter.aincant(handler, log=log)
+            return await incanter.aincant(handler, log=log, **kwargs)
 
         return wrapper
 
