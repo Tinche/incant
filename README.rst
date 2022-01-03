@@ -161,7 +161,10 @@ Quart provides path parameters like this to handlers as ``kwargs``, so you modif
 
         return wrapper
 
-The decorator simply receives them and passes them along to the handler. Another day of earning your keep!
+The decorator simply receives them and passes them along to the handler.
+This works because `incant` will use arguments provided to `invoke` if it cannot satisfy a parameter using its internal dependency factories.
+
+Another day of earning your keep!
 
 The Magic of ``incant``
 ~~~~~~~~~~~~~~~~~~~~~~~
