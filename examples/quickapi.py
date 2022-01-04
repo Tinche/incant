@@ -4,6 +4,7 @@ from ipaddress import IPv4Address
 from attrs import define, has
 from cattr import structure
 from quart import Quart, request
+from quattro import TaskGroup
 from structlog.stdlib import BoundLogger, get_logger
 from werkzeug.exceptions import BadRequest
 
@@ -29,6 +30,7 @@ def make_attrs_payload_factory(attrs_cls: type):
 incanter.register_hook_factory(
     lambda p: has(p.annotation), lambda p: make_attrs_payload_factory(p.annotation)
 )
+incanter.register_by_type(TaskGroup)
 
 
 @define
@@ -108,6 +110,16 @@ class SamplePayload:
 async def attrs_handler(payload: SamplePayload, log) -> str:
     log.info("Received payload", payload=repr(payload))
     return "After payload"
+
+
+@app.get("/taskgroup")
+@quickapi
+async def taskgroup_handler(tg: TaskGroup, log: BoundLogger) -> str:
+    async def inner():
+        log.info("Using structured concurrency, not leaking tasks")
+
+    tg.create_task(inner())
+    return "nice"
 
 
 app.run()

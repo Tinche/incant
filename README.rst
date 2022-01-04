@@ -52,6 +52,11 @@ To install `incant`, simply:
 Tutorial
 --------
 
+.. note::
+
+    This section contains a long, narrative-style guide to `incant`.
+    There is a *Usage* section below with a more focused description of the library API.
+
 Let's demonstrate the use of `incant` with a hypothetical scenario.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
 You don't have to do it from scratch though, so you choose (essentially at random) an existing framework: Quart (Quart is an async version of Flask).
@@ -276,6 +281,33 @@ But only for the handlers that require the ``User`` dependency.
 
 Pretty cool!
 
+Async Context Managers
+~~~~~~~~~~~~~~~~~~~~~~
+
+A colleague of yours has heard of this newfangled concept of structured concurrency, and insists on trying it out.
+You offer to let them use TaskGroups from the ``quattro`` library.
+
+Their handler looks like this:
+
+.. code-block:: python
+
+    from quattro import TaskGroup
+
+    @app.get("/taskgroup")
+    @quickapi
+    async def taskgroup_handler(tg: TaskGroup, log: BoundLogger) -> str:
+        async def inner():
+            log.info("Using structured concurrency, not leaking tasks")
+
+        tg.create_task(inner())
+        return "nice"
+
+You don't feel particularly challenged, as ``incant`` support async context managers out of the box and the only thing you need to do is:
+
+.. code-block:: python
+
+    incanter.register_by_type(TaskGroup)
+
 Complex Rules
 ~~~~~~~~~~~~~
 
@@ -333,7 +365,7 @@ Otherwise, since our ``User`` model is also an `attrs` class, `incant` would try
 Usage
 -----
 
-This section contains a quick usage guide to `incant`. The tutorial second below contains a longer, narrative-style walkthough.
+This section contains a quick usage guide to `incant`.
 
 State (in the form of dependency factories) is kept in an instance of ``incant.Incanter``.
 
