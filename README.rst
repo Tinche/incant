@@ -49,11 +49,6 @@ To install `incant`, simply:
 
     $ pip install incant
 
-Usage
------
-
-This section contains a quick usage guide to `incant`. The tutorial second below contains a longer, narrative-style walkthough.
-
 Tutorial
 --------
 
@@ -333,6 +328,74 @@ This will also return a ``400`` status code if the payload cannot be properly lo
 
 Because of how `incant` evaluates dependency rules (newest first), this hook factory needs to be registered before the ``current_user`` dependency factory.
 Otherwise, since our ``User`` model is also an `attrs` class, `incant` would try loading it from the request body instead of getting it from the ``current_user`` dependency factory.
+
+
+Usage
+-----
+
+This section contains a quick usage guide to `incant`. The tutorial second below contains a longer, narrative-style walkthough.
+
+State (in the form of dependency factories) is kept in an instance of ``incant.Incanter``.
+
+.. code-block:: python
+
+    from incant import Incanter
+
+    incanter = Incanter()
+
+The ``incanter`` can now be used to call functions (``invoke``) and coroutines (``ainvoke``).
+Since there are no dependency factories registered yet, ``incanter.invoke(fn, a, b, c)`` is equivalent to ``fn(a, b, c)``.
+
+.. code-block:: python
+
+    def my_function(my_argument):
+        print(f"Called with {my_argument}")
+
+    incanter.invoke(my_function, 1)
+    'Called with 1'
+
+The simplest way to register a dependency factory is by name:
+
+.. code-block:: python
+
+    @incanter.register_by_name
+    def my_argument():
+        return 2
+
+The result of this dependency factory will be substituted when we invoke a function that has an argument named ``my_argument``.
+
+.. code-block:: python
+
+    incanter.invoke(my_function)
+    'Called with 2'
+
+Another simple way to register a dependency factory is by its return type:
+
+.. code-block:: python
+
+    @incanter.register_by_type
+    def another_factory(my_argument) -> int:
+        return my_argument + 1
+
+    def another_function(takes_int: int):
+        print(f"Called with {takes_int}")
+
+    incanter.invoke(another_function)
+    'Called with 3'
+
+Dependency factories may themselves have dependencies provided to them, as shown in the above example.
+``incant`` performs a depth-first pass of gathering nested dependencies.
+
+Incanter instances also have a helper method, ``incanter.incant`` (and ``incanter.aincant``), that serves as a smart wrapper around ``incanter.invoke``.
+``incant`` filters out unnecessary arguments before calling ``invoke``, and is a useful tool for building generic components.
+
+``register_by_name`` and ``register_by_type`` delegate to ``incanter.register_hook``.
+``register_hook`` takes a predicate function and a dependency factory.
+When determining if a depency factory can be used for a parameter, ``incant`` will try predicate functions (from newest to oldest) until one matches and use that dependency.
+Predicate functions take an ``inspect.Parameter`` and return a ``bool``, so they can match using anything present in ``Parameter``.
+
+``register_hook`` delegates to ``register_hook_factory``, which takes a predicate function and a factory of depedendency factories.
+This outer factory takes an ``inspect.Parameter`` and returns a depedency factory, enabling generic depedendency factories.
 
 Changelog
 ---------
