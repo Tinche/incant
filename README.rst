@@ -52,9 +52,8 @@ To install `incant`, simply:
 Tutorial
 --------
 
-.. note::
-    This section contains a long, narrative-style guide to `incant`.
-    There is a *Usage* section below with a more focused description of the library API.
+This section contains a long, narrative-style guide to `incant`.
+There is a *Usage* section below with a more focused description of the library API.
 
 Let's demonstrate the use of `incant` with a hypothetical scenario.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
@@ -360,6 +359,7 @@ This will also return a ``400`` status code if the payload cannot be properly lo
 Because of how `incant` evaluates dependency rules (newest first), this hook factory needs to be registered before the ``current_user`` dependency factory.
 Otherwise, since our ``User`` model is also an `attrs` class, `incant` would try loading it from the request body instead of getting it from the ``current_user`` dependency factory.
 
+The complete source code of this mini-project can be found at https://github.com/Tinche/incant/blob/main/examples/quickapi.py.
 
 Usage
 -----
