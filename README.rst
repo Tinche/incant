@@ -53,7 +53,6 @@ Tutorial
 --------
 
 .. note::
-
     This section contains a long, narrative-style guide to `incant`.
     There is a *Usage* section below with a more focused description of the library API.
 
