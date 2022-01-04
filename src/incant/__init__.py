@@ -1,7 +1,6 @@
 import linecache
 import uuid
 
-from collections.abc import Mapping
 from contextlib import AbstractAsyncContextManager
 from functools import lru_cache
 from inspect import (
@@ -16,6 +15,7 @@ from typing import (
     Awaitable,
     Callable,
     List,
+    Mapping,
     Optional,
     Tuple,
     Type,
