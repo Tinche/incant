@@ -7,10 +7,21 @@ name = "incant"
 authors = [{name = "Tin Tvrtkovic", email = "tinchester@gmail.com"}]
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 version = "0.1"
-description = ""
+requires-python = ">=3.8"
+description = "Magical function composition"
+readme = "README.rst"
 
 [project.optional-dependencies]
-dev = ["black", "isort", "flake8", "pytest", "rich", "pytest-asyncio", "quattro"]
+dev = [
+    "black",
+    "coverage",
+    "flake8",
+    "isort",
+    "pytest-asyncio",
+    "pytest",
+    "quattro",
+    "rich",
+]
 
 [project.urls]
 Home = "https://github.com/Tinche/incant"
