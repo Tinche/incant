@@ -336,7 +336,7 @@ It will produce a different dependency hook for each `attrs` class we encounter,
 .. code-block:: python
 
     from attrs import has
-    from cattr import structure
+    from cattrs import structure
     from werkzeug.exceptions import BadRequest
 
     def make_attrs_payload_factory(attrs_cls: type):
