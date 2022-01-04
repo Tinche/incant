@@ -2,7 +2,7 @@ from functools import wraps
 from ipaddress import IPv4Address
 
 from attrs import define, has
-from cattr import structure
+from cattrs import structure
 from quart import Quart, request
 from quattro import TaskGroup
 from structlog.stdlib import BoundLogger, get_logger
