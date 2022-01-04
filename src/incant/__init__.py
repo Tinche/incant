@@ -11,7 +11,17 @@ from inspect import (
     iscoroutinefunction,
     signature,
 )
-from typing import Any, Awaitable, Callable, Optional, Type, TypeVar, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from attr import Factory, define
 
@@ -46,7 +56,7 @@ class LocalVarConstant:
 @define
 class LocalVarFactory:
     factory: Callable
-    args: list[Union[Callable, ParameterDep]]
+    args: List[Union[Callable, ParameterDep]]
 
 
 LocalVar = Union[LocalVarConstant, LocalVarFactory]
@@ -55,7 +65,7 @@ PredicateFn = Callable[[Parameter], bool]
 
 @define(slots=False)
 class Incanter:
-    hook_factory_registry: list[tuple[PredicateFn, Callable]] = Factory(list)
+    hook_factory_registry: List[Tuple[PredicateFn, Callable]] = Factory(list)
 
     def __attrs_post_init__(self):
         self._gen_fn = lru_cache(None)(self._gen_fn)
@@ -166,7 +176,7 @@ class Incanter:
         self.hook_factory_registry.insert(0, (predicate, hook_factory))
         self._gen_fn.cache_clear()
 
-    def _gen_dep_tree(self, fn: Callable) -> list[tuple[Callable, list[Dep]]]:
+    def _gen_dep_tree(self, fn: Callable) -> List[Tuple[Callable, List[Dep]]]:
         """Generate the dependency tree for `fn` given the current hook reg."""
         to_process = [fn]
         final_nodes = []
@@ -228,7 +238,7 @@ class Incanter:
             dep for node in dep_tree for dep in node[1] if isinstance(dep, ParameterDep)
         ]
         # We need to do a pass over the outer args to consolidate duplicates.
-        per_outer_arg: dict[str, list[ParameterDep]] = {}
+        per_outer_arg: dict[str, List[ParameterDep]] = {}
         for arg in outer_args:
             per_outer_arg.setdefault(arg.arg_name, []).append(arg)
 
@@ -289,8 +299,8 @@ def _reconcile_types(type_a, type_b):
 
 def _compile_fn(
     fn,
-    outer_args: list[ParameterDep],
-    local_vars: list[LocalVar],
+    outer_args: List[ParameterDep],
+    local_vars: List[LocalVar],
     is_async: bool = False,
 ) -> Callable:
     # Some arguments need to be taken from outside.
