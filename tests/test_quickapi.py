@@ -32,7 +32,26 @@ async def test_index(quickapi_server: str):
 
 
 @pytest.mark.asyncio
+async def test_payload_handler(quickapi_server: str):
+    async with AsyncClient() as client:
+        resp = (await client.get(f"{quickapi_server}/header")).text
+        assert resp == "The header was: none"
+
+        resp = (
+            await client.post(f"{quickapi_server}/payload", content=b'{"field": 1}')
+        ).text
+        assert resp == "After payload"
+
+
+@pytest.mark.asyncio
 async def test_header_handler(quickapi_server: str):
     async with AsyncClient() as client:
         resp = (await client.get(f"{quickapi_server}/header")).text
         assert resp == "The header was: none"
+
+        resp = (
+            await client.get(
+                f"{quickapi_server}/header", headers={"content-type": "test"}
+            )
+        ).text
+        assert resp == "The header was: test"

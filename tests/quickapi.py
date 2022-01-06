@@ -124,7 +124,7 @@ class SamplePayload:
 
 @app.post("/payload")
 @quickapi
-async def attrs_handler(payload: SamplePayload, log) -> str:
+async def attrs_handler(payload: SamplePayload, log: BoundLogger) -> str:
     log.info("Received payload", payload=repr(payload))
     return "After payload"
 
