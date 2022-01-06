@@ -7,8 +7,8 @@ incant: a little magic for your functions
 .. image:: https://github.com/Tinche/incant/workflows/CI/badge.svg
         :target: https://github.com/Tinche/incant/actions?workflow=CI
 
-.. image:: https://codecov.io/gh/Tinche/inject/branch/main/graph/badge.svg?token=9IE6FHZV2K
-       :target: https://codecov.io/gh/Tinche/inject
+.. image:: https://codecov.io/gh/Tinche/incant/branch/main/graph/badge.svg?token=9IE6FHZV2K
+       :target: https://codecov.io/gh/Tinche/incant
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
