@@ -48,18 +48,11 @@ Dep = Union[FactoryDep, ParameterDep]
 
 
 @define
-class LocalVarConstant:
-    factory: Callable
-    value: Any
-
-
-@define
 class LocalVarFactory:
     factory: Callable
     args: List[Union[Callable, ParameterDep]]
 
 
-LocalVar = Union[LocalVarConstant, LocalVarFactory]
 PredicateFn = Callable[[Parameter], bool]
 
 
@@ -291,7 +284,7 @@ def _reconcile_types(type_a, type_b):
 def _compile_fn(
     fn,
     outer_args: List[ParameterDep],
-    local_vars: List[LocalVar],
+    local_vars: List[LocalVarFactory],
     is_async: bool = False,
 ) -> Callable:
     # Some arguments need to be taken from outside.
@@ -320,33 +313,28 @@ def _compile_fn(
     ind = 0  # Indentation level
     for i, local_var in enumerate(local_vars):
         local_name = f"_incant_local_{i}"
-        if isinstance(local_var, LocalVarConstant):
-            local_var_local_val = f"_incant_local_val_{i}"
-            lines.append(f"  {local_name} = {local_var_local_val}")
-            globs[local_var_local_val] = local_var.value
-        else:
-            local_var_factory = f"_incant_local_factory_{i}"
-            globs[local_var_factory] = local_var.factory
-            local_arg_lines = []
-            for local_arg in local_var.args:
-                if isinstance(local_arg, ParameterDep):
-                    local_arg_lines.append(local_arg.arg_name)
-                else:
-                    local_arg_lines.append(
-                        f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
-                    )
-            if _is_async_context_manager(local_var.factory):
-                lines.append(
-                    f"  {' ' * ind}async with {local_var_factory}({', '.join(local_arg_lines)}) as {local_name}:"
-                )
-                ind += 2
+        local_var_factory = f"_incant_local_factory_{i}"
+        globs[local_var_factory] = local_var.factory
+        local_arg_lines = []
+        for local_arg in local_var.args:
+            if isinstance(local_arg, ParameterDep):
+                local_arg_lines.append(local_arg.arg_name)
             else:
-                aw = ""
-                if iscoroutinefunction(local_var.factory):
-                    aw = "await "
-                lines.append(
-                    f"  {' ' * ind}{local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
+                local_arg_lines.append(
+                    f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
                 )
+        if _is_async_context_manager(local_var.factory):
+            lines.append(
+                f"  {' ' * ind}async with {local_var_factory}({', '.join(local_arg_lines)}) as {local_name}:"
+            )
+            ind += 2
+        else:
+            aw = ""
+            if iscoroutinefunction(local_var.factory):
+                aw = "await "
+            lines.append(
+                f"  {' ' * ind}{local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
+            )
 
     incant_arg_lines = []
     local_var_ix = len(local_vars) - 1
