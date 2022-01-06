@@ -359,7 +359,43 @@ This will also return a ``400`` status code if the payload cannot be properly lo
 Because of how `incant` evaluates dependency rules (newest first), this hook factory needs to be registered before the ``current_user`` dependency factory.
 Otherwise, since our ``User`` model is also an `attrs` class, `incant` would try loading it from the request body instead of getting it from the ``current_user`` dependency factory.
 
-The complete source code of this mini-project can be found at https://github.com/Tinche/incant/blob/main/examples/quickapi.py.
+Complex Rules Pt 2: Electric Boogaloo
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A colleague wants to receive HTTP headers in their handler.
+They also want these parameters to be able to have default values.
+You decide to create a simple string subclass called ``Header`` and have your colleague annotate their parameters with it.
+Their header looks like this:
+
+.. code-block:: python
+
+    from typing import NewType
+
+    Header = NewType("Header", str)
+
+    @app.get("/header")
+    @quickapi
+    async def a_header_handler(content_type: Header = Header("none"), log=logger) -> str:
+        return f"The header was: {content_type}"
+
+Since each header parameter needs separate logic, you once again reach for hook factories.
+You remember kebab-case is more commonly used than snake_case for headers, so you apply a small transformation - a parameter named ``content_type`` will get the value of the ``content-type`` header field.
+
+You write the necessary instructions:
+
+.. code-block:: python
+
+    def make_header_factory(name: str, default):
+        if default is Parameter.empty:
+            return lambda: request.headers[name.replace("_", "-")]
+        else:
+            return lambda: request.headers.get(name.replace("_", "-"), default)
+
+    incanter.register_hook_factory(
+        lambda p: p.annotation is Header, lambda p: make_header_factory(p.name, p.default)
+    )
+
+The complete source code of this mini-project can be found at https://github.com/Tinche/incant/blob/main/tests/quickapi.py.
 
 Usage
 -----

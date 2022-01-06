@@ -19,8 +19,11 @@ dev = [
     "isort",
     "pytest-asyncio",
     "pytest",
+    "quart",
     "quattro",
     "rich",
+    "structlog",
+    "uvicorn",
 ]
 
 [project.urls]

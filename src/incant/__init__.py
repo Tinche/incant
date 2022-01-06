@@ -213,26 +213,17 @@ class Incanter:
             is_async = any(iscoroutinefunction(factory) for factory, _ in dep_tree)
         # All non-parameter deps become local vars.
         for factory, deps in dep_tree[:-1]:
-            if (
-                not deps
-                and not iscoroutinefunction(factory)
-                and not _is_async_context_manager(factory)
-            ):
-                local_vars.append(LocalVarConstant(factory, factory()))
-            else:
-                if not is_async and iscoroutinefunction(factory):
-                    raise Exception(
-                        f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
-                    )
-                deps = [
-                    dep.factory if isinstance(dep, FactoryDep) else dep for dep in deps
-                ]
-                local_vars.append(
-                    LocalVarFactory(
-                        factory,
-                        deps,
-                    )
+            if not is_async and iscoroutinefunction(factory):
+                raise Exception(
+                    f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
                 )
+            deps = [dep.factory if isinstance(dep, FactoryDep) else dep for dep in deps]
+            local_vars.append(
+                LocalVarFactory(
+                    factory,
+                    deps,
+                )
+            )
 
         outer_args = [
             dep for node in dep_tree for dep in node[1] if isinstance(dep, ParameterDep)

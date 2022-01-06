@@ -1,5 +1,7 @@
 from functools import wraps
+from inspect import Parameter
 from ipaddress import IPv4Address
+from typing import NewType
 
 from attrs import define, has
 from cattrs import structure
@@ -14,6 +16,9 @@ from incant import Incanter
 app = Quart(__name__)
 incanter = Incanter()
 logger = get_logger()
+
+
+Header = NewType("Header", str)
 
 
 def make_attrs_payload_factory(attrs_cls: type):
@@ -31,6 +36,12 @@ incanter.register_hook_factory(
     lambda p: has(p.annotation), lambda p: make_attrs_payload_factory(p.annotation)
 )
 incanter.register_by_type(TaskGroup)
+
+
+@incanter.register_by_type
+def get_ip_address() -> IPv4Address:
+    # In Quart (like in Flask), the request is accessed through a global proxy
+    return IPv4Address(request.remote_addr)
 
 
 @define
@@ -51,6 +62,18 @@ incanter.register_by_name(
 )
 
 
+def make_header_factory(name: str, default):
+    if default is Parameter.empty:
+        return lambda: request.headers[name.replace("_", "-")]
+    else:
+        return lambda: request.headers.get(name.replace("_", "-"), default)
+
+
+incanter.register_hook_factory(
+    lambda p: p.annotation is Header, lambda p: make_header_factory(p.name, p.default)
+)
+
+
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
@@ -60,12 +83,6 @@ def quickapi(handler):
         return await incanter.aincant(handler, log=log, **kwargs)
 
     return wrapper
-
-
-@incanter.register_by_type
-def get_ip_address() -> IPv4Address:
-    # In Quart (like in Flask), the request is accessed through a global proxy
-    return IPv4Address(request.remote_addr)
 
 
 @app.get("/")
@@ -122,4 +139,11 @@ async def taskgroup_handler(tg: TaskGroup, log: BoundLogger) -> str:
     return "nice"
 
 
-app.run()
+@app.get("/header")
+@quickapi
+async def a_header_handler(content_type: Header = Header("none"), log=logger) -> str:
+    return f"The header was: {content_type}"
+
+
+if __name__ == "__main__":
+    app.run()
