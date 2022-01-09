@@ -37,7 +37,7 @@ Dep = Union[FactoryDep, ParameterDep]
 PredicateFn = Callable[[Parameter], bool]
 
 
-@define(slots=False)
+@define
 class Incanter:
     hook_factory_registry: List[Tuple[PredicateFn, Callable]] = Factory(list)
     _invoke_cache: Callable = field(

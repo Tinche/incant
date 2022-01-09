@@ -39,3 +39,11 @@ async def test_async_pos_args_by_type(incanter: Incanter):
         return x + 1
 
     assert await incanter.aincant(func, 5) == 6
+
+
+def test_missing_args(incanter: Incanter):
+    def func(x: int) -> int:
+        return x + 1
+
+    with pytest.raises(TypeError):
+        incanter.incant(func)

@@ -126,3 +126,13 @@ def test_class_deps(incanter: Incanter):
             ),
         ]
     )
+
+
+def test_no_return_type(incanter: Incanter):
+    """Registering by type with no return type is an error."""
+
+    def dep():
+        return 1
+
+    with pytest.raises(Exception):
+        incanter.register_by_type(dep)
