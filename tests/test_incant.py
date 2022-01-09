@@ -22,3 +22,10 @@ def test_simple_args(incanter: Incanter):
         return a + b
 
     assert incanter.incant(func, a=1, b=1) == 2
+
+
+def test_pos_args_by_type(incanter: Incanter):
+    def func(x: int) -> int:
+        return x + 1
+
+    assert incanter.incant(func, 5) == 6
