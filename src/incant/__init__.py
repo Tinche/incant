@@ -22,7 +22,6 @@ _type = type
 
 
 R = TypeVar("R")
-AR = TypeVar("AR", bound=Awaitable)
 
 
 @define
@@ -48,14 +47,14 @@ class Incanter:
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
         return self._invoke_cache(fn)(*args, **kwargs)
 
-    def ainvoke(self, fn: Callable[..., AR], *args, **kwargs) -> AR:
-        return self._invoke_cache(fn, True)(*args, **kwargs)
+    async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
+        return await self._invoke_cache(fn, True)(*args, **kwargs)
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
         return self._incant(fn, args, kwargs)
 
-    async def aincant(self, fn: Callable[..., AR], *args, **kwargs) -> AR:
+    async def aincant(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         """Invoke async `fn` the best way we can."""
         return await self._incant(fn, args, kwargs, is_async=True)
 

@@ -15,7 +15,7 @@ incant: a little magic for your functions
 
 ----
 
-**incant** is an Apache 2-licensed library, written in Python, for composing and invoking functions.
+**incant** is a Python open source library for composing and invoking functions.
 Going by the old, humorous adage that dependency injection is simply passing arguments to functions, `incant` is a toolkit that is well suited to that use case.
 
 `incant` includes support for:
@@ -33,6 +33,9 @@ Going by the old, humorous adage that dependency injection is simply passing arg
 * methods for invoking arbitrary functions while injecting dependencies: ``Incanter.invoke()`` and its async variant, ``Incanter.ainvoke()``
 * a method for getting the parameters of an arbitrary function after injecting dependencies: ``Incanter.parameters()``
 * methods for invoking arbitrary functions while injecting dependencies and forwarding any required arguments: ``Incanter.incant`` and its async variant, ``Incanter.aincant``
+
+`incant` is able to leverage runtime type annotations, but is also capable of functioning without them.
+`incant` is also fully type-annotated for use with Mypy and smart editors.
 
 The tutorial section below contains a walkthough and some real-life use cases of `incant`.
 
