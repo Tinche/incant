@@ -1,6 +1,7 @@
 from functools import lru_cache
 from inspect import Parameter, Signature, iscoroutinefunction, signature
 from typing import (
+    Any,
     Awaitable,
     Callable,
     List,
@@ -52,57 +53,11 @@ class Incanter:
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
-        prepared_fn = self._invoke_cache(fn)
-        pos_args_by_type = {a.__class__: a for a in args}
-        kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
-        prepared_args = []
-        prepared_kwargs = {}
-        sig = signature(prepared_fn)
-        for arg_name, arg in sig.parameters.items():
-            if (
-                arg.annotation is not Signature.empty
-                and (arg_name, arg.annotation) in kwargs_by_name_and_type
-            ):
-                prepared_args.append(
-                    kwargs_by_name_and_type[(arg_name, arg.annotation)]
-                )
-            elif (
-                arg.annotation is not Signature.empty
-                and arg.annotation in pos_args_by_type
-            ):
-                prepared_args.append(pos_args_by_type[arg.annotation])
-            elif arg_name in kwargs:
-                prepared_args.append(kwargs[arg_name])
-            else:
-                raise TypeError(f"Cannot fulfil argument {arg_name}")
-        return prepared_fn(*prepared_args, **prepared_kwargs)
+        return self._incant(fn, args, kwargs)
 
     async def aincant(self, fn: Callable[..., AR], *args, **kwargs) -> AR:
         """Invoke async `fn` the best way we can."""
-        prepared_fn = self._invoke_cache(fn, is_async=True)
-        pos_args_by_type = {a.__class__: a for a in args}
-        kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
-        prepared_args = []
-        prepared_kwargs = {}
-        sig = signature(prepared_fn)
-        for arg_name, arg in sig.parameters.items():
-            if (
-                arg.annotation is not Signature.empty
-                and (arg_name, arg.annotation) in kwargs_by_name_and_type
-            ):
-                prepared_args.append(
-                    kwargs_by_name_and_type[(arg_name, arg.annotation)]
-                )
-            elif (
-                arg.annotation is not Signature.empty
-                and arg.annotation in pos_args_by_type
-            ):
-                prepared_args.append(pos_args_by_type[arg.annotation])
-            elif arg_name in kwargs:
-                prepared_args.append(kwargs[arg_name])
-            else:
-                raise TypeError(f"Cannot fulfil argument {arg_name}")
-        return await prepared_fn(*prepared_args, **prepared_kwargs)
+        return await self._incant(fn, args, kwargs, is_async=True)
 
     def parameters(self, fn: Callable) -> Mapping[str, Parameter]:
         """Return the signature needed to successfully and exactly invoke `fn`."""
@@ -147,6 +102,36 @@ class Incanter:
     def register_hook_factory(self, predicate: PredicateFn, hook_factory: Callable):
         self.hook_factory_registry.insert(0, (predicate, hook_factory))
         self._invoke_cache.cache_clear()
+
+    def _incant(self, fn: Callable, args: Tuple[Any], kwargs, is_async: bool = False):
+        prepared_fn = (
+            self._invoke_cache(fn)
+            if not is_async
+            else self._invoke_cache(fn, is_async=True)
+        )
+        pos_args_by_type = {a.__class__: a for a in args}
+        kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
+        prepared_args = []
+        prepared_kwargs = {}
+        sig = signature(prepared_fn)
+        for arg_name, arg in sig.parameters.items():
+            if (
+                arg.annotation is not Signature.empty
+                and (arg_name, arg.annotation) in kwargs_by_name_and_type
+            ):
+                prepared_args.append(
+                    kwargs_by_name_and_type[(arg_name, arg.annotation)]
+                )
+            elif (
+                arg.annotation is not Signature.empty
+                and arg.annotation in pos_args_by_type
+            ):
+                prepared_args.append(pos_args_by_type[arg.annotation])
+            elif arg_name in kwargs:
+                prepared_args.append(kwargs[arg_name])
+            else:
+                raise TypeError(f"Cannot fulfil argument {arg_name}")
+        return prepared_fn(*prepared_args, **prepared_kwargs)
 
     def _gen_dep_tree(self, fn: Callable) -> List[Tuple[Callable, List[Dep]]]:
         """Generate the dependency tree for `fn` given the current hook reg."""

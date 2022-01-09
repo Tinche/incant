@@ -1,3 +1,5 @@
+import pytest
+
 from incant import Incanter
 
 
@@ -29,3 +31,11 @@ def test_pos_args_by_type(incanter: Incanter):
         return x + 1
 
     assert incanter.incant(func, 5) == 6
+
+
+@pytest.mark.asyncio
+async def test_async_pos_args_by_type(incanter: Incanter):
+    def func(x: int) -> int:
+        return x + 1
+
+    assert await incanter.aincant(func, 5) == 6
