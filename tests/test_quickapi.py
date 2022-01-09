@@ -4,7 +4,7 @@ from asyncio import create_task, sleep
 import pytest
 
 from httpx import AsyncClient
-from uvicorn import Config, Server
+from uvicorn import Config, Server  # type: ignore
 
 from .quickapi import app
 

@@ -4,9 +4,11 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Dict,
     List,
     Mapping,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -15,7 +17,12 @@ from typing import (
 
 from attr import Factory, define, field
 
-from ._codegen import LocalVarFactory, ParameterDep, compile_fn
+from ._codegen import (
+    LocalVarFactory,
+    ParameterDep,
+    compile_fn,
+    compile_incant_wrapper,
+)
 
 
 _type = type
@@ -42,6 +49,12 @@ class Incanter:
     _invoke_cache: Callable = field(
         init=False,
         default=Factory(lambda self: lru_cache(None)(self._gen_fn), takes_self=True),
+    )
+    _incant_cache: Callable = field(
+        init=False,
+        default=Factory(
+            lambda self: lru_cache(None)(self._gen_incant), takes_self=True
+        ),
     )
 
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
@@ -78,7 +91,7 @@ class Incanter:
             name = fn.__name__
         self.register_hook(lambda p: p.name == name, fn)
 
-    def register_by_type(self, fn: Optional[Callable], type: Optional[Type] = None):
+    def register_by_type(self, fn: Union[Callable, Type], type: Optional[Type] = None):
         """
         Register a factory to be injected by type. Can also be used as a decorator.
 
@@ -86,62 +99,103 @@ class Incanter:
         factory will be used.
         """
         if type is None:
-            if fn.__class__ is _type:
-                type = fn
+            if isinstance(fn, _type):
+                type_to_reg = fn
             else:
                 sig = signature(fn)
-                type = sig.return_annotation
-                if type is Signature.empty:
+                type_to_reg = sig.return_annotation
+                if type_to_reg is Signature.empty:
                     raise Exception("No return type found, provide a type.")
-        self.register_hook(lambda p: issubclass(p.annotation, type), fn)
+        else:
+            type_to_reg = type
+        self.register_hook(lambda p: issubclass(p.annotation, type_to_reg), fn)
 
     def register_hook(self, predicate: PredicateFn, factory: Callable):
         self.register_hook_factory(predicate, lambda _: factory)
 
     def register_hook_factory(self, predicate: PredicateFn, hook_factory: Callable):
         self.hook_factory_registry.insert(0, (predicate, hook_factory))
-        self._invoke_cache.cache_clear()
+        self._invoke_cache.cache_clear()  # type: ignore
 
-    def _incant(self, fn: Callable, args: Tuple[Any], kwargs, is_async: bool = False):
+    def _incant(
+        self,
+        fn: Callable,
+        args: Tuple[Any, ...],
+        kwargs: Dict[str, Any],
+        is_async: bool = False,
+    ):
+        """The shared entrypoint for ``incant`` and ``aincant``."""
+
+        pos_args_types = tuple([a.__class__ for a in args])
+        kwargs_by_name_and_type = frozenset(
+            [(k, v.__class__) for k, v in kwargs.items()]
+        )
+        wrapper = self._incant_cache(
+            fn, pos_args_types, kwargs_by_name_and_type, is_async
+        )
+
+        return wrapper(*args, **kwargs)
+
+    def _gen_incant_plan(
+        self, fn, pos_args_types: Tuple, kwargs: Set[Tuple[str, Any]], is_async=False
+    ) -> List[Union[int, str]]:
+        """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
+        pos_arg_plan: List[Union[int, str]] = []
         prepared_fn = (
             self._invoke_cache(fn)
             if not is_async
             else self._invoke_cache(fn, is_async=True)
         )
-        pos_args_by_type = {a.__class__: a for a in args}
-        kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
-        prepared_args = []
-        prepared_kwargs = {}
+        pos_args_by_type = {a: ix for ix, a in enumerate(pos_args_types)}
+        kwarg_names = {kw[0] for kw in kwargs}
         sig = signature(prepared_fn)
         for arg_name, arg in sig.parameters.items():
             if (
                 arg.annotation is not Signature.empty
-                and (arg_name, arg.annotation) in kwargs_by_name_and_type
+                and (arg_name, arg.annotation) in kwargs
             ):
-                prepared_args.append(
-                    kwargs_by_name_and_type[(arg_name, arg.annotation)]
-                )
+                pos_arg_plan.append(arg_name)
             elif (
                 arg.annotation is not Signature.empty
                 and arg.annotation in pos_args_by_type
             ):
-                prepared_args.append(pos_args_by_type[arg.annotation])
-            elif arg_name in kwargs:
-                prepared_args.append(kwargs[arg_name])
+                pos_arg_plan.append(pos_args_by_type[arg.annotation])
+            elif arg_name in kwarg_names:
+                pos_arg_plan.append(arg_name)
             else:
                 raise TypeError(f"Cannot fulfil argument {arg_name}")
-        return prepared_fn(*prepared_args, **prepared_kwargs)
+        return pos_arg_plan
+
+    def _gen_incant(
+        self,
+        fn: Callable,
+        pos_args_types: Tuple,
+        kwargs_by_name_and_type: Set,
+        is_async: Optional[bool] = False,
+    ) -> Callable:
+        prepared_fn = (
+            self._invoke_cache(fn)
+            if not is_async
+            else self._invoke_cache(fn, is_async=True)
+        )
+        plan = self._gen_incant_plan(
+            prepared_fn, pos_args_types, kwargs_by_name_and_type, is_async=is_async
+        )
+        incant = compile_incant_wrapper(
+            prepared_fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
+        )
+        return incant
 
     def _gen_dep_tree(self, fn: Callable) -> List[Tuple[Callable, List[Dep]]]:
-        """Generate the dependency tree for `fn` given the current hook reg."""
+        """Generate the dependency tree for `fn`."""
         to_process = [fn]
-        final_nodes = []
+        final_nodes: List[Tuple[Callable, List[Dep]]] = []
         while to_process:
             _nodes = to_process
             to_process = []
             for node in _nodes:
                 sig = signature(node)
-                dependents = []
+                dependents: List[Union[ParameterDep, FactoryDep]] = []
                 for name, param in sig.parameters.items():
                     if node is not fn and param.default is not Signature.empty:
                         # Do not expose optional params of dependencies.
@@ -173,11 +227,13 @@ class Incanter:
                 raise Exception(
                     f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
                 )
-            deps = [dep.factory if isinstance(dep, FactoryDep) else dep for dep in deps]
             local_vars.append(
                 LocalVarFactory(
                     factory,
-                    deps,
+                    [
+                        dep.factory if isinstance(dep, FactoryDep) else dep
+                        for dep in deps
+                    ],
                 )
             )
 

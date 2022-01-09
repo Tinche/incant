@@ -35,7 +35,7 @@ def test_pos_args_by_type(incanter: Incanter):
 
 @pytest.mark.asyncio
 async def test_async_pos_args_by_type(incanter: Incanter):
-    def func(x: int) -> int:
+    async def func(x: int) -> int:
         return x + 1
 
     assert await incanter.aincant(func, 5) == 6

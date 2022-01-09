@@ -19,6 +19,7 @@ dev = [
     "flake8",
     "httpx",
     "isort",
+    "mypy",
     "pytest-asyncio",
     "pytest",
     "quart",

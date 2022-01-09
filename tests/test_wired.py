@@ -172,7 +172,7 @@ def test_greeter_decoupled(incanter: Incanter):
 
     incanter.register_by_name(lambda: "!!", name="punctuation")
 
-    customer_types_to_greeters = defaultdict(lambda: Greeter)
+    customer_types_to_greeters = defaultdict(lambda: Greeter)  # type: ignore
 
     def greeter_factory(customer, punctuation) -> Greeter:
         return customer_types_to_greeters[type(customer)](punctuation)
@@ -226,7 +226,7 @@ def test_greeter_datastore(incanter: Incanter):
     incanter.register_by_name(lambda: "!!", name="punctuation")
     incanter.register_by_type(lambda: datastore, Datastore)
 
-    customer_types_to_greeters = defaultdict(lambda: Greeter)
+    customer_types_to_greeters = defaultdict(lambda: Greeter)  # type: ignore
     incanter.register_by_type(
         lambda customer, punctuation: customer_types_to_greeters[type(customer)](
             punctuation

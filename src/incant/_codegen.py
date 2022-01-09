@@ -8,13 +8,16 @@ from inspect import (
     iscoroutinefunction,
     signature,
 )
+from time import time
 from typing import Any, Callable, List, Union
 
 from attr import define
 
 
-def _is_async_context_manager(fn: Callable) -> bool:
-    return (fn.__class__ is type and issubclass(fn, AbstractAsyncContextManager)) or (
+def _is_async_context_manager(fn: Any) -> bool:
+    return (
+        fn.__class__ is type and issubclass(fn, AbstractAsyncContextManager)
+    ) or bool(
         (wrapped := getattr(fn, "__wrapped__", None)) and isasyncgenfunction(wrapped)
     )
 
@@ -32,7 +35,7 @@ class LocalVarFactory:
 
 
 def compile_fn(
-    fn,
+    fn: Callable,
     outer_args: List[ParameterDep],
     local_vars: List[LocalVarFactory],
     is_async: bool = False,
@@ -104,14 +107,50 @@ def compile_fn(
 
     script = "\n".join(lines)
 
-    fname = _generate_unique_filename(fn.__name__)
+    fname = _generate_unique_filename(fn.__name__, "invoke")
     eval(compile(script, fname, "exec"), globs)
 
     fn = globs[fn_name]
     return fn
 
 
-def _generate_unique_filename(func_name):
+def compile_incant_wrapper(
+    fn: Callable, incant_plan: List[Union[int, str]], num_pos_args: int, num_kwargs: int
+):
+    fn_name = f"incant_{fn.__name__}" if fn.__name__ != "<lambda>" else "incant_lambda"
+    globs = {"_incant_inner_fn": fn}
+    arg_lines = []
+    if incant_plan:
+        if num_pos_args:
+            arg_lines.append("*args")
+        else:
+            arg_lines.append("*")
+
+    kwargs = [arg for arg in incant_plan if isinstance(arg, str)]
+    arg_lines.extend(kwargs)
+    if num_kwargs > len(kwargs):
+        arg_lines.append("**kwargs")
+
+    lines = []
+    lines.append(f"def {fn_name}({', '.join(arg_lines)}):")
+    lines.append("  return _incant_inner_fn(")
+    for arg in incant_plan:
+        if isinstance(arg, int):
+            lines.append(f"    args[{arg}],")
+        else:
+            lines.append(f"    {arg},")
+    lines.append("  )")
+
+    script = "\n".join(lines)
+
+    fname = _generate_unique_filename(fn.__name__, "incant")
+    eval(compile(script, fname, "exec"), globs)
+
+    fn = globs[fn_name]
+    return fn
+
+
+def _generate_unique_filename(func_name: str, func_type: str):
     """
     Create a "filename" suitable for a function being generated.
     """
@@ -120,17 +159,14 @@ def _generate_unique_filename(func_name):
     count = 1
 
     while True:
-        unique_filename = "<incant generated incant of {0}{1}>".format(
-            func_name,
-            extra,
-        )
+        unique_filename = f"<incant generated {func_type} of {func_name}{extra}>"
         # To handle concurrency we essentially "reserve" our spot in
         # the linecache with a dummy line.  The caller can then
         # set this value correctly.
-        cache_line = (1, None, (str(unique_id),), unique_filename)
+        cache_line = (1, time(), [str(unique_id)], unique_filename)
         if linecache.cache.setdefault(unique_filename, cache_line) == cache_line:
             return unique_filename
 
         # Looks like this spot is taken. Try again.
         count += 1
-        extra = "-{0}".format(count)
+        extra = f"-{count}"
