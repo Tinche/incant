@@ -72,12 +72,33 @@ def test_nested_partial_deps_with_args(incanter: Incanter):
 
 
 def test_shared_deps(incanter: Incanter):
-    incanter.register_hook(
-        lambda p: p.name == "dep1", lambda dep2, input: dep2 + input + 1
-    )
-    incanter.register_hook(lambda p: p.name == "dep2", lambda: 2)
+    incanter.register_by_name(lambda dep2, input: dep2 + input + 1, name="dep1")
+    incanter.register_by_name(lambda: 2, name="dep2")
 
     def func(dep1, input: float) -> float:
+        return dep1 + 1 + input
+
+    assert incanter.parameters(func) == OrderedDict(
+        [
+            (
+                "input",
+                Parameter("input", Parameter.POSITIONAL_OR_KEYWORD, annotation=float),
+            ),
+        ]
+    )
+    assert incanter.invoke(func, 5.0) == 14.0
+
+
+def test_shared_deps_type_from_dep(incanter: Incanter):
+    """The parameter type definition comes from the dependency."""
+
+    @incanter.register_by_name
+    def dep1(dep2, input: float):
+        return dep2 + input + 1
+
+    incanter.register_by_name(lambda: 2, name="dep2")
+
+    def func(dep1, input) -> float:
         return dep1 + 1 + input
 
     assert incanter.parameters(func) == OrderedDict(
