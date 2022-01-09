@@ -12,7 +12,7 @@ from typing import (
     Union,
 )
 
-from attr import Factory, define
+from attr import Factory, define, field
 
 from ._codegen import LocalVarFactory, ParameterDep, compile_fn
 
@@ -39,19 +39,20 @@ PredicateFn = Callable[[Parameter], bool]
 @define(slots=False)
 class Incanter:
     hook_factory_registry: List[Tuple[PredicateFn, Callable]] = Factory(list)
-
-    def __attrs_post_init__(self):
-        self._gen_fn = lru_cache(None)(self._gen_fn)
+    _invoke_cache: Callable = field(
+        init=False,
+        default=Factory(lambda self: lru_cache(None)(self._gen_fn), takes_self=True),
+    )
 
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
-        return self._gen_fn(fn)(*args, **kwargs)
+        return self._invoke_cache(fn)(*args, **kwargs)
 
     def ainvoke(self, fn: Callable[..., AR], *args, **kwargs) -> AR:
-        return self._gen_fn(fn, True)(*args, **kwargs)
+        return self._invoke_cache(fn, True)(*args, **kwargs)
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
-        prepared_fn = self._gen_fn(fn)
+        prepared_fn = self._invoke_cache(fn)
         pos_args_by_type = {a.__class__: a for a in args}
         kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
         prepared_args = []
@@ -78,7 +79,7 @@ class Incanter:
 
     async def aincant(self, fn: Callable[..., AR], *args, **kwargs) -> AR:
         """Invoke async `fn` the best way we can."""
-        prepared_fn = self._gen_fn(fn, is_async=True)
+        prepared_fn = self._invoke_cache(fn, is_async=True)
         pos_args_by_type = {a.__class__: a for a in args}
         kwargs_by_name_and_type = {(k, v.__class__): v for k, v in kwargs.items()}
         prepared_args = []
@@ -105,7 +106,7 @@ class Incanter:
 
     def parameters(self, fn: Callable) -> Mapping[str, Parameter]:
         """Return the signature needed to successfully and exactly invoke `fn`."""
-        return signature(self._gen_fn(fn, is_async=None)).parameters
+        return signature(self._invoke_cache(fn, is_async=None)).parameters
 
     def register_by_name(
         self, fn: Optional[Callable] = None, *, name: Optional[str] = None
@@ -145,7 +146,7 @@ class Incanter:
 
     def register_hook_factory(self, predicate: PredicateFn, hook_factory: Callable):
         self.hook_factory_registry.insert(0, (predicate, hook_factory))
-        self._gen_fn.cache_clear()
+        self._invoke_cache.cache_clear()
 
     def _gen_dep_tree(self, fn: Callable) -> List[Tuple[Callable, List[Dep]]]:
         """Generate the dependency tree for `fn` given the current hook reg."""
