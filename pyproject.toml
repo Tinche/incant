@@ -28,6 +28,12 @@ dev = [
     "structlog",
     "uvicorn",
 ]
+bench = [
+    "dependency-injector",
+    "di",
+    "wired",
+    "pyperf",
+]
 
 [project.urls]
 Home = "https://github.com/Tinche/incant"
