@@ -470,6 +470,6 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 Changelog
 ---------
 
-0.1.0 (UNRELEASED)
+0.1.0 (2022-01-10)
 ~~~~~~~~~~~~~~~~~~
 * Initial release.
