@@ -43,10 +43,11 @@ def wired_call_func():
 
 container = Container()
 container.bind(dep1, int)
+solved = container.solve(Dependant(func))
 
 
 def di_call_func():
-    container.execute_sync(container.solve(Dependant(func)))
+    container.execute_sync(solved)
 
 
 # Dependency-injector
