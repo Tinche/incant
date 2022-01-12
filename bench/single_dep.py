@@ -24,7 +24,7 @@ incant.register_by_name(dep1)
 
 
 def incant_call_func():
-    incant.invoke(func)
+    incant.prepare(func)()
 
 
 # wired
