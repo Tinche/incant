@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from inspect import Parameter
+from inspect import Parameter, signature
 
 import pytest
 
@@ -14,14 +14,14 @@ def test_simple_dep(incanter: Incanter):
 
     with pytest.raises(TypeError):
         incanter.invoke(func)
-    assert incanter.parameters(func) == {
+    assert signature(incanter.prepare(func)).parameters == {
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
     }
 
     incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
     assert incanter.invoke(func) == 3
 
-    assert incanter.parameters(func) == {}
+    assert signature(incanter.prepare(func)).parameters == {}
 
 
 def test_nested_deps(incanter: Incanter):
@@ -31,7 +31,7 @@ def test_nested_deps(incanter: Incanter):
     def func(dep1):
         return dep1 + 1
 
-    assert incanter.parameters(func) == {}
+    assert signature(incanter.prepare(func)).parameters == {}
     assert incanter.invoke(func) == 4
 
 
@@ -44,7 +44,7 @@ def test_nested_partial_deps(incanter: Incanter):
     def func(dep1):
         return dep1 + 1
 
-    assert incanter.parameters(func) == {
+    assert signature(incanter.prepare(func)).parameters == {
         "input": Parameter("input", Parameter.POSITIONAL_OR_KEYWORD)
     }
     assert incanter.invoke(func, 1) == 5
@@ -59,7 +59,7 @@ def test_nested_partial_deps_with_args(incanter: Incanter):
     def func(dep1, input2: float) -> float:
         return dep1 + 1 + input2
 
-    assert incanter.parameters(func) == OrderedDict(
+    assert signature(incanter.prepare(func)).parameters == OrderedDict(
         [
             ("input", Parameter("input", Parameter.POSITIONAL_OR_KEYWORD)),
             (
@@ -78,7 +78,7 @@ def test_shared_deps(incanter: Incanter):
     def func(dep1, input: float) -> float:
         return dep1 + 1 + input
 
-    assert incanter.parameters(func) == OrderedDict(
+    assert signature(incanter.prepare(func)).parameters == OrderedDict(
         [
             (
                 "input",
@@ -101,7 +101,7 @@ def test_shared_deps_type_from_dep(incanter: Incanter):
     def func(dep1, input) -> float:
         return dep1 + 1 + input
 
-    assert incanter.parameters(func) == OrderedDict(
+    assert signature(incanter.prepare(func)).parameters == OrderedDict(
         [
             (
                 "input",
@@ -125,7 +125,7 @@ def test_shared_deps_incompatible(incanter: Incanter):
         return dep1 + 1 + input
 
     with pytest.raises(Exception):
-        incanter.parameters(func)
+        incanter.prepare(func)
 
     with pytest.raises(Exception):
         incanter.invoke(func, 5.0)
@@ -139,7 +139,7 @@ def test_class_deps(incanter: Incanter):
     incanter.register_hook(lambda p: p.name == "dep", Dep)
     assert incanter.invoke(lambda dep: dep.a + 1, a=1)
 
-    assert incanter.parameters(lambda dep: dep.a + 1) == OrderedDict(
+    assert signature(incanter.prepare(lambda dep: dep.a + 1)).parameters == OrderedDict(
         [
             (
                 "a",

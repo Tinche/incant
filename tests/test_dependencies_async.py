@@ -1,7 +1,7 @@
 from asyncio import sleep
 from collections import OrderedDict
 from contextlib import asynccontextmanager
-from inspect import Parameter
+from inspect import Parameter, signature
 
 import pytest
 
@@ -29,7 +29,9 @@ async def test_async_dep(incanter: Incanter):
         incanter.invoke(lambda dep1: dep1 + 1) == 2
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1)) == 2
-    assert incanter.parameters(lambda dep1: dep1 + 1) == OrderedDict([])
+    assert signature(
+        incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
+    ).parameters == OrderedDict([])
 
 
 @pytest.mark.asyncio
@@ -46,7 +48,9 @@ async def test_async_mixed_dep(incanter: Incanter):
         incanter.invoke(lambda dep1: dep1 + 1, 1)
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1, 1)) == 4
-    assert incanter.parameters(lambda dep1: dep1 + 1) == OrderedDict(
+    assert signature(
+        incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
+    ).parameters == OrderedDict(
         [("input", Parameter("input", Parameter.POSITIONAL_OR_KEYWORD, annotation=int))]
     )
 

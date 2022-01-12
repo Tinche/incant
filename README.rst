@@ -456,6 +456,44 @@ Another simple way to register a dependency factory is by its return type:
 Dependency factories may themselves have dependencies provided to them, as shown in the above example.
 ``incant`` performs a depth-first pass of gathering nested dependencies.
 
+``incanter.invoke`` uses ``incanter.prepare`` internally.
+``prepare`` does the actual heavy lifting of creating and caching a wrapper with the dependencies processed and wired.
+It's useful for getting the wrappers for caching or inspection - the wrappers support ordinary Python introspection using the standard library `inspect` module.
+
+``prepare`` also allows customizing the wrapper without adding hooks to the actual ``Incanter``.
+
+.. code-block:: python
+
+    @incanter.register_by_name
+    def my_argument():
+        return 2
+
+    def my_function(my_argument):
+        print(f"Called with {my_argument}")
+
+    >>> incanter.invoke(my_function)
+    2
+
+    >>> incanter.prepare(lambda: my_argument)()  # Equivalent.
+    2
+
+    >>> incanter.prepare(lambda: my_argument, ((lambda p: p.name == "my_argument", lambda _: lambda: 1),))()
+    1
+
+The hook argument is a tuple (sorry, for caching) of hooks, which are themselves tuples of predicate functions and dependency factories.
+A more readable interface for this is planned in the future.
+Also be aware that since in Python lambdas don't play well with caching, if you're preparing functions with hook overrides often you will want to store the actual overrides somewhere and reuse them.
+
+.. code-block:: python
+
+    # Inefficient:
+    >>> incanter.prepare(lambda: my_argument, ((lambda p: p.name == "my_argument", lambda _: lambda: 1),))()
+
+    # Efficient:
+    >>> additional_hooks = ((lambda p: p.name == "my_argument", lambda _: lambda: 1),)  # Store this and reuse it.
+
+    >>> incanter.prepare(lambda: my_argument, additional_hooks)()  # Now uses the cache.
+
 Incanter instances also have a helper method, ``incanter.incant`` (and ``incanter.aincant``), that serves as a smart wrapper around ``incanter.invoke``.
 ``incant`` filters out unnecessary arguments before calling ``invoke``, and is a useful tool for building generic components.
 
@@ -469,6 +507,12 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
+
+0.2.0 (UNRELEASED)
+~~~~~~~~~~~~~~~~~~
+* Introduce ``incanter.prepare``, and make ``incanter.a/invoke`` use it. ``prepare`` just generates the prepared injection wrapper for a function and returns it, without executing it.
+* Remove ``incanter.parameters``, since it's now equivalent to ``inspect.signature(incanter.prepare(fn)).parameters``.
+* Add the ability to pass hook overrides to ``incanter.prepare``.
 
 0.1.0 (2022-01-10)
 ~~~~~~~~~~~~~~~~~~

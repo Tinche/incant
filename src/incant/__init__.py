@@ -6,8 +6,8 @@ from typing import (
     Callable,
     Dict,
     List,
-    Mapping,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -41,14 +41,17 @@ Dep = Union[FactoryDep, ParameterDep]
 
 
 PredicateFn = Callable[[Parameter], bool]
+Hook = Tuple[PredicateFn, Callable[[Parameter], Callable]]
 
 
 @define
 class Incanter:
-    hook_factory_registry: List[Tuple[PredicateFn, Callable]] = Factory(list)
+    hook_factory_registry: List[Hook] = Factory(list)
     _invoke_cache: Callable = field(
         init=False,
-        default=Factory(lambda self: lru_cache(None)(self._gen_fn), takes_self=True),
+        default=Factory(
+            lambda self: lru_cache(None)(self._gen_invoke), takes_self=True
+        ),
     )
     _incant_cache: Callable = field(
         init=False,
@@ -58,10 +61,15 @@ class Incanter:
     )
 
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
-        return self._invoke_cache(fn)(*args, **kwargs)
+        return self.prepare(fn)(*args, **kwargs)
+
+    def prepare(
+        self, fn: Callable[..., R], hooks: Tuple[Hook, ...] = (), is_async=False
+    ) -> Callable[..., R]:
+        return self._invoke_cache(fn, hooks, is_async)
 
     async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
-        return await self._invoke_cache(fn, True)(*args, **kwargs)
+        return await self.prepare(fn, is_async=True)(*args, **kwargs)
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
@@ -70,10 +78,6 @@ class Incanter:
     async def aincant(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         """Invoke async `fn` the best way we can."""
         return await self._incant(fn, args, kwargs, is_async=True)
-
-    def parameters(self, fn: Callable) -> Mapping[str, Parameter]:
-        """Return the signature needed to successfully and exactly invoke `fn`."""
-        return signature(self._invoke_cache(fn, is_async=None)).parameters
 
     def register_by_name(
         self, fn: Optional[Callable] = None, *, name: Optional[str] = None
@@ -186,10 +190,13 @@ class Incanter:
         )
         return incant
 
-    def _gen_dep_tree(self, fn: Callable) -> List[Tuple[Callable, List[Dep]]]:
+    def _gen_dep_tree(
+        self, fn: Callable, additional_hooks: Sequence[Hook]
+    ) -> List[Tuple[Callable, List[Dep]]]:
         """Generate the dependency tree for `fn`."""
         to_process = [fn]
         final_nodes: List[Tuple[Callable, List[Dep]]] = []
+        hooks = list(additional_hooks) + self.hook_factory_registry
         while to_process:
             _nodes = to_process
             to_process = []
@@ -201,7 +208,7 @@ class Incanter:
                         # Do not expose optional params of dependencies.
                         continue
                     param_type = param.annotation
-                    for predicate, hook_factory in self.hook_factory_registry:
+                    for predicate, hook_factory in hooks:
                         if predicate(param):
                             # Match!
                             factory = hook_factory(param)
@@ -213,8 +220,10 @@ class Incanter:
                 final_nodes.insert(0, (node, dependents))
         return final_nodes
 
-    def _gen_fn(self, fn: Callable, is_async: Optional[bool] = False):
-        dep_tree = self._gen_dep_tree(fn)
+    def _gen_invoke(
+        self, fn: Callable, hooks: Sequence = (), is_async: Optional[bool] = False
+    ):
+        dep_tree = self._gen_dep_tree(fn, hooks)
 
         local_vars = []
 
