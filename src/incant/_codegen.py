@@ -1,6 +1,7 @@
 import linecache
 import uuid
 
+from asyncio import create_task
 from contextlib import AbstractAsyncContextManager
 from inspect import (
     Signature,
@@ -44,6 +45,8 @@ def compile_fn(
     # Some arguments need to be calculated from factories.
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
     globs = {"_incant_inner_fn": fn}
+    if is_async:
+        globs["_incant_create_task"] = create_task
     arg_lines = []
     for dep in outer_args:
         if dep.type is not Signature.empty:
@@ -55,6 +58,7 @@ def compile_fn(
         arg_lines.append(f"{dep.arg_name}{arg_type_snippet}")
     outer_arg_names = {o.arg_name for o in outer_args}
 
+    tasks = set()
     lines = []
     if is_async:
         lines.append(f"async def {fn_name}({', '.join(arg_lines)}):")
@@ -73,9 +77,11 @@ def compile_fn(
             if isinstance(local_arg, ParameterDep):
                 local_arg_lines.append(local_arg.arg_name)
             else:
-                local_arg_lines.append(
-                    f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
-                )
+                local_var_name = f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
+                if local_var_name in tasks:
+                    local_arg_lines.append(f"await {local_var_name}")
+                else:
+                    local_arg_lines.append(local_var_name)
         if _is_async_context_manager(local_var.factory):
             lines.append(
                 f"  {' ' * ind}async with {local_var_factory}({', '.join(local_arg_lines)}) as {local_name}:"
@@ -84,10 +90,14 @@ def compile_fn(
         else:
             aw = ""
             if iscoroutinefunction(local_var.factory):
-                aw = "await "
-            lines.append(
-                f"  {' ' * ind}{local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
-            )
+                lines.append(
+                    f"  {' ' * ind}{local_name} = _incant_create_task({local_var_factory}({', '.join(local_arg_lines)}))"
+                )
+                tasks.add(local_name)
+            else:
+                lines.append(
+                    f"  {' ' * ind}{local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
+                )
 
     incant_arg_lines = []
     local_var_ix = len(local_vars) - 1
@@ -95,7 +105,11 @@ def compile_fn(
         if name in outer_arg_names:
             incant_arg_lines.append(name)
         else:
-            incant_arg_lines.append(f"_incant_local_{local_var_ix}")
+            local_var_name = f"_incant_local_{local_var_ix}"
+            if local_var_name in tasks:
+                incant_arg_lines.append(f"await {local_var_name}")
+            else:
+                incant_arg_lines.append(local_var_name)
             local_var_ix -= 1
 
     aw = ""

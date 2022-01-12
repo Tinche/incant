@@ -5,3 +5,9 @@ single_dep:
 
 two_deps:
 	@bash -c "for lib in $(LIBS); do echo -n \"Benchmarking \$$lib: \" && pyperf timeit --rigorous -q -s \"from two_deps import \$${lib}_call_func as call_func\" 'call_func()'; done"
+
+concurrent_deps:
+	@bash -c "for lib in $(LIBS); do echo -n \"Benchmarking \$$lib: \" && pyperf timeit --fast -q -s \"from concurrent_deps import \$${lib}_call_func as call_func\" 'call_func()'; done"
+
+concurrent_nested_deps:
+	@bash -c "for lib in $(LIBS); do echo -n \"Benchmarking \$$lib: \" && pyperf timeit --fast -q -s \"from concurrent_nested_deps import \$${lib}_call_func as call_func\" 'call_func()'; done"
