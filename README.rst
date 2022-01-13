@@ -513,7 +513,7 @@ Changelog
 ~~~~~~~~~~~~~~~~~~
 * Introduce ``incanter.prepare``, and make ``incanter.a/invoke`` use it. ``prepare`` just generates the prepared injection wrapper for a function and returns it, without executing it.
 * Remove ``incanter.parameters``, since it's now equivalent to ``inspect.signature(incanter.prepare(fn)).parameters``.
-* Add the ability to pass hook overrides to ``incanter.prepare``.
+* Add the ability to pass hook overrides to ``incanter.prepare``, and introduce the ``incanter.Hook`` class to make it more usable.
 
 0.1.0 (2022-01-10)
 ~~~~~~~~~~~~~~~~~~

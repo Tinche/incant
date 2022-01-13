@@ -74,13 +74,16 @@ class Incanter:
         ),
     )
 
-    def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
-        return self.prepare(fn)(*args, **kwargs)
-
     def prepare(
-        self, fn: Callable[..., R], hooks: Sequence[Hook] = (), is_async=False
+        self,
+        fn: Callable[..., R],
+        hooks: Sequence[Hook] = (),
+        is_async: Optional[bool] = None,
     ) -> Callable[..., R]:
         return self._invoke_cache(fn, tuple(hooks), is_async)
+
+    def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
+        return self.prepare(fn, is_async=False)(*args, **kwargs)
 
     async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         return await self.prepare(fn, is_async=True)(*args, **kwargs)
