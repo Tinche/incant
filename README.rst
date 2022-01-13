@@ -1,5 +1,5 @@
-incant: a little magic for your functions
-=========================================
+incant🪄: a little magic for your functions
+===========================================
 
 .. image:: https://img.shields.io/pypi/v/incant.svg
         :target: https://pypi.python.org/pypi/incant
