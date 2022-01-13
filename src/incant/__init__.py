@@ -15,7 +15,7 @@ from typing import (
     Union,
 )
 
-from attr import Factory, define, field
+from attr import Factory, define, field, frozen
 
 from ._codegen import (
     LocalVarFactory,
@@ -41,7 +41,21 @@ Dep = Union[FactoryDep, ParameterDep]
 
 
 PredicateFn = Callable[[Parameter], bool]
-Hook = Tuple[PredicateFn, Callable[[Parameter], Callable]]
+
+
+@frozen
+class Hook:
+    predicate: PredicateFn
+    factory: Callable[[Parameter], Callable]
+
+    @classmethod
+    def for_name(cls, name: str, hook: Callable):
+        return cls(lambda p: p.name == name, lambda _: hook)
+
+    @classmethod
+    def for_type(cls, type: Any, hook: Callable):
+        """Register by exact type (subclasses won't match)."""
+        return cls(lambda p: p.annotation == type, lambda _: hook)
 
 
 @define
@@ -64,9 +78,9 @@ class Incanter:
         return self.prepare(fn)(*args, **kwargs)
 
     def prepare(
-        self, fn: Callable[..., R], hooks: Tuple[Hook, ...] = (), is_async=False
+        self, fn: Callable[..., R], hooks: Sequence[Hook] = (), is_async=False
     ) -> Callable[..., R]:
-        return self._invoke_cache(fn, hooks, is_async)
+        return self._invoke_cache(fn, tuple(hooks), is_async)
 
     async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         return await self.prepare(fn, is_async=True)(*args, **kwargs)
@@ -117,9 +131,12 @@ class Incanter:
     def register_hook(self, predicate: PredicateFn, factory: Callable):
         self.register_hook_factory(predicate, lambda _: factory)
 
-    def register_hook_factory(self, predicate: PredicateFn, hook_factory: Callable):
-        self.hook_factory_registry.insert(0, (predicate, hook_factory))
+    def register_hook_factory(
+        self, predicate: PredicateFn, hook_factory: Callable[[Parameter], Callable]
+    ):
+        self.hook_factory_registry.insert(0, Hook(predicate, hook_factory))
         self._invoke_cache.cache_clear()  # type: ignore
+        self._incant_cache.cache_clear()  # type: ignore
 
     def _incant(
         self,
@@ -208,10 +225,10 @@ class Incanter:
                         # Do not expose optional params of dependencies.
                         continue
                     param_type = param.annotation
-                    for predicate, hook_factory in hooks:
-                        if predicate(param):
+                    for hook in hooks:
+                        if hook.predicate(param):
                             # Match!
-                            factory = hook_factory(param)
+                            factory = hook.factory(param)
                             to_process.append(factory)
                             dependents.append(FactoryDep(factory, name))
                             break
@@ -221,7 +238,10 @@ class Incanter:
         return final_nodes
 
     def _gen_invoke(
-        self, fn: Callable, hooks: Sequence = (), is_async: Optional[bool] = False
+        self,
+        fn: Callable,
+        hooks: Tuple[Hook, ...] = (),
+        is_async: Optional[bool] = False,
     ):
         dep_tree = self._gen_dep_tree(fn, hooks)
 

@@ -464,6 +464,8 @@ It's useful for getting the wrappers for caching or inspection - the wrappers su
 
 .. code-block:: python
 
+    from incant import Hook
+
     @incanter.register_by_name
     def my_argument():
         return 2
@@ -477,20 +479,19 @@ It's useful for getting the wrappers for caching or inspection - the wrappers su
     >>> incanter.prepare(lambda: my_argument)()  # Equivalent.
     2
 
-    >>> incanter.prepare(lambda: my_argument, ((lambda p: p.name == "my_argument", lambda _: lambda: 1),))()
+    >>> incanter.prepare(lambda: my_argument, [Hook.for_name("my_argument", lambda: 1)])()
     1
 
-The hook argument is a tuple (sorry, for caching) of hooks, which are themselves tuples of predicate functions and dependency factories.
-A more readable interface for this is planned in the future.
+The hook argument is a sequence of hooks, which are a predicate function and dependency factory.
 Also be aware that since in Python lambdas don't play well with caching, if you're preparing functions with hook overrides often you will want to store the actual overrides somewhere and reuse them.
 
 .. code-block:: python
 
     # Inefficient:
-    >>> incanter.prepare(lambda: my_argument, ((lambda p: p.name == "my_argument", lambda _: lambda: 1),))()
+    >>> incanter.prepare(lambda: my_argument, [Hook.for_name("my_argument", lambda: 1)])()
 
     # Efficient:
-    >>> additional_hooks = ((lambda p: p.name == "my_argument", lambda _: lambda: 1),)  # Store this and reuse it.
+    >>> additional_hooks = [Hook.for_name("my_argument", lambda: 1)] # Store this and reuse it.
 
     >>> incanter.prepare(lambda: my_argument, additional_hooks)()  # Now uses the cache.
 

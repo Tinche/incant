@@ -1,4 +1,4 @@
-from incant import Incanter
+from incant import Hook, Incanter
 
 
 def test_simple_override(incanter: Incanter):
@@ -9,8 +9,13 @@ def test_simple_override(incanter: Incanter):
 
     assert incanter.invoke(fn) == 6
 
-    additional_hooks = ((lambda p: p.name == "dep1", lambda _: lambda: 0),)
+    additional_hooks = [Hook.for_name("dep1", lambda: 0)]
 
     assert incanter.prepare(fn, additional_hooks)() == 1
     assert incanter.prepare(fn, additional_hooks)() == 1
     assert incanter.prepare(fn, additional_hooks)() == 1
+
+    additional_hooks = [Hook.for_type(int, lambda: 10)]
+
+    assert incanter.prepare(fn, additional_hooks)() == 11
+    assert incanter.prepare(fn, additional_hooks)() == 11
