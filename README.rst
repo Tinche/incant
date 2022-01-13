@@ -509,7 +509,7 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 Changelog
 ---------
 
-0.2.0 (UNRELEASED)
+0.2.0 (2022-01-13)
 ~~~~~~~~~~~~~~~~~~
 * Introduce ``incanter.prepare``, and make ``incanter.a/invoke`` use it. ``prepare`` just generates the prepared injection wrapper for a function and returns it, without executing it.
 * Remove ``incanter.parameters``, since it's now equivalent to ``inspect.signature(incanter.prepare(fn)).parameters``.
