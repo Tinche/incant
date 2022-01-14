@@ -1,5 +1,4 @@
 import linecache
-import uuid
 
 from contextlib import AbstractAsyncContextManager
 from inspect import (
@@ -8,7 +7,6 @@ from inspect import (
     iscoroutinefunction,
     signature,
 )
-from time import time
 from typing import Any, Callable, List, Union
 
 from attr import define
@@ -113,7 +111,7 @@ def compile_invoke(
 
     script = "\n".join(lines)
 
-    fname = _generate_unique_filename(fn.__name__, "invoke")
+    fname = _generate_unique_filename(fn.__name__, "invoke", lines)
     eval(compile(script, fname, "exec"), globs)
 
     fn = globs[fn_name]
@@ -149,18 +147,17 @@ def compile_incant_wrapper(
 
     script = "\n".join(lines)
 
-    fname = _generate_unique_filename(fn.__name__, "incant")
+    fname = _generate_unique_filename(fn.__name__, "incant", lines)
     eval(compile(script, fname, "exec"), globs)
 
     fn = globs[fn_name]
     return fn
 
 
-def _generate_unique_filename(func_name: str, func_type: str):
+def _generate_unique_filename(func_name: str, func_type: str, source: list[str]):
     """
     Create a "filename" suitable for a function being generated.
     """
-    unique_id = uuid.uuid4()
     extra = ""
     count = 1
 
@@ -169,8 +166,8 @@ def _generate_unique_filename(func_name: str, func_type: str):
         # To handle concurrency we essentially "reserve" our spot in
         # the linecache with a dummy line.  The caller can then
         # set this value correctly.
-        cache_line = (1, time(), [str(unique_id)], unique_filename)
-        if linecache.cache.setdefault(unique_filename, cache_line) == cache_line:
+        cache_line = (len(source), None, source, unique_filename)
+        if linecache.cache.setdefault(unique_filename, cache_line) == cache_line:  # type: ignore
             return unique_filename
 
         # Looks like this spot is taken. Try again.
