@@ -87,3 +87,12 @@ async def test_taskgroup_dep(incanter: Incanter):
         return 2
 
     assert (await incanter.ainvoke(fn)) == 2
+
+
+def test_async_invoke_return_type(incanter: Incanter):
+    """Async context manager dependencies work."""
+
+    async def fn() -> int:
+        return 2
+
+    assert signature(incanter.prepare(fn)).return_annotation is int

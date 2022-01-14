@@ -9,7 +9,7 @@ from incant import Incanter
 
 
 def test_simple_dep(incanter: Incanter):
-    def func(dep1):
+    def func(dep1) -> int:
         return dep1 + 1
 
     with pytest.raises(TypeError):
@@ -22,6 +22,7 @@ def test_simple_dep(incanter: Incanter):
     assert incanter.invoke(func) == 3
 
     assert signature(incanter.prepare(func)).parameters == {}
+    assert signature(incanter.prepare(func)).return_annotation is int
 
 
 def test_nested_deps(incanter: Incanter):

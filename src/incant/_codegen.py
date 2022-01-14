@@ -34,7 +34,7 @@ class LocalVarFactory:
     args: List[Union[Callable, ParameterDep]]
 
 
-def compile_fn(
+def compile_invoke(
     fn: Callable,
     outer_args: List[ParameterDep],
     local_vars: List[LocalVarFactory],
@@ -42,6 +42,7 @@ def compile_fn(
 ) -> Callable:
     # Some arguments need to be taken from outside.
     # Some arguments need to be calculated from factories.
+    sig = signature(fn)
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
     globs = {"_incant_inner_fn": fn}
     arg_lines = []
@@ -56,10 +57,15 @@ def compile_fn(
     outer_arg_names = {o.arg_name for o in outer_args}
 
     lines = []
+
+    ret_type = ""
+    if sig.return_annotation is not Signature.empty:
+        globs["_incant_return_type"] = sig.return_annotation
+        ret_type = " -> _incant_return_type"
     if is_async:
-        lines.append(f"async def {fn_name}({', '.join(arg_lines)}):")
+        lines.append(f"async def {fn_name}({', '.join(arg_lines)}){ret_type}:")
     else:
-        lines.append(f"def {fn_name}({', '.join(arg_lines)}):")
+        lines.append(f"def {fn_name}({', '.join(arg_lines)}){ret_type}:")
     local_vars_ix_by_factory = {
         local_var.factory: ix for ix, local_var in enumerate(local_vars)
     }
@@ -91,7 +97,7 @@ def compile_fn(
 
     incant_arg_lines = []
     local_var_ix = len(local_vars) - 1
-    for name in signature(fn).parameters:
+    for name in sig.parameters:
         if name in outer_arg_names:
             incant_arg_lines.append(name)
         else:

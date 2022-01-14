@@ -20,8 +20,8 @@ from attr import Factory, define, field, frozen
 from ._codegen import (
     LocalVarFactory,
     ParameterDep,
-    compile_fn,
     compile_incant_wrapper,
+    compile_invoke,
 )
 
 
@@ -294,7 +294,7 @@ class Incanter:
                         )
             outer_args.append(ParameterDep(arg_name, arg_type))
 
-        return compile_fn(fn, outer_args, local_vars, is_async=is_async)
+        return compile_invoke(fn, outer_args, local_vars, is_async=is_async)
 
 
 def _reconcile_types(type_a, type_b):

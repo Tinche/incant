@@ -508,6 +508,9 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
+0.3.0 (UNRELEASED)
+~~~~~~~~~~~~~~~~~~
+* Properly set the return type annotation when preparing a function.
 
 0.2.0 (2022-01-13)
 ~~~~~~~~~~~~~~~~~~
