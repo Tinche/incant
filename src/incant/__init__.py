@@ -50,17 +50,14 @@ class Hook:
 
     @classmethod
     def for_name(cls, name: str, hook: Optional[Callable]):
-        return cls(
-            lambda p: p.name == name,
-            (lambda _: lambda: hook) if hook is not None else None,
-        )
+        return cls(lambda p: p.name == name, None if hook is None else (lambda _: hook))  # type: ignore
 
     @classmethod
     def for_type(cls, type: Any, hook: Optional[Callable]):
         """Register by exact type (subclasses won't match)."""
         return cls(
             lambda p: p.annotation == type,
-            (lambda _: lambda: hook) if hook is not None else None,
+            None if hook is None else lambda _: hook,  # type: ignore
         )
 
 
