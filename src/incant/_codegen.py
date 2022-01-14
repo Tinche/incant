@@ -154,7 +154,7 @@ def compile_incant_wrapper(
     return fn
 
 
-def _generate_unique_filename(func_name: str, func_type: str, source: list[str]):
+def _generate_unique_filename(func_name: str, func_type: str, source: List[str]):
     """
     Create a "filename" suitable for a function being generated.
     """
