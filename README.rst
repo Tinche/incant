@@ -511,6 +511,7 @@ Changelog
 0.3.0 (UNRELEASED)
 ~~~~~~~~~~~~~~~~~~
 * Properly set the return type annotation when preparing a function.
+* A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting ``Hook.factory`` to ``None``.
 
 0.2.0 (2022-01-13)
 ~~~~~~~~~~~~~~~~~~

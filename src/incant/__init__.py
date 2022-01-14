@@ -46,16 +46,16 @@ PredicateFn = Callable[[Parameter], bool]
 @frozen
 class Hook:
     predicate: PredicateFn
-    factory: Callable[[Parameter], Callable]
+    factory: Optional[Callable[[Parameter], Callable]]
 
     @classmethod
-    def for_name(cls, name: str, hook: Callable):
-        return cls(lambda p: p.name == name, lambda _: hook)
+    def for_name(cls, name: str, hook: Optional[Callable]):
+        return cls(lambda p: p.name == name, None if not hook else lambda _: hook)
 
     @classmethod
-    def for_type(cls, type: Any, hook: Callable):
+    def for_type(cls, type: Any, hook: Optional[Callable]):
         """Register by exact type (subclasses won't match)."""
-        return cls(lambda p: p.annotation == type, lambda _: hook)
+        return cls(lambda p: p.annotation == type, None if not hook else lambda _: hook)
 
 
 @define
@@ -231,9 +231,12 @@ class Incanter:
                     for hook in hooks:
                         if hook.predicate(param):
                             # Match!
-                            factory = hook.factory(param)
-                            to_process.append(factory)
-                            dependents.append(FactoryDep(factory, name))
+                            if hook.factory is None:
+                                dependents.append(ParameterDep(name, param_type))
+                            else:
+                                factory = hook.factory(param)
+                                to_process.append(factory)
+                                dependents.append(FactoryDep(factory, name))
                             break
                     else:
                         dependents.append(ParameterDep(name, param_type))
