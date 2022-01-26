@@ -24,6 +24,7 @@ def _is_async_context_manager(fn: Any) -> bool:
 class ParameterDep:
     arg_name: str
     type: Any
+    default: Signature.empty
 
 
 @define
@@ -50,6 +51,10 @@ def compile_invoke(
             globs[f"_incant_arg_{dep.arg_name}"] = dep.type
         else:
             arg_type_snippet = ""
+        if dep.default is not Signature.empty:
+            arg_default = f"_incant_default_{dep.arg_name}"
+            arg_type_snippet = f"{arg_type_snippet} = {arg_default}"
+            globs[arg_default] = dep.default
 
         arg_lines.append(f"{dep.arg_name}{arg_type_snippet}")
     outer_arg_names = {o.arg_name for o in outer_args}

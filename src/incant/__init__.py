@@ -235,14 +235,16 @@ class Incanter:
                         if hook.predicate(param):
                             # Match!
                             if hook.factory is None:
-                                dependents.append(ParameterDep(name, param_type))
+                                dependents.append(
+                                    ParameterDep(name, param_type, param.default)
+                                )
                             else:
                                 factory = hook.factory(param)
                                 to_process.append(factory)
                                 dependents.append(FactoryDep(factory, name))
                             break
                     else:
-                        dependents.append(ParameterDep(name, param_type))
+                        dependents.append(ParameterDep(name, param_type, param.default))
                 final_nodes.insert(0, (node, dependents))
         return final_nodes
 
@@ -287,10 +289,12 @@ class Incanter:
         for arg_name, args in per_outer_arg.items():
             if len(args) == 1:
                 arg_type = args[0].type
+                arg_default = args[0].default
             else:
                 # If there are multiple competing argument defs,
                 # we need to pick a winning type.
                 arg_type = Signature.empty
+                arg_default = Signature.empty
                 for arg in args:
                     try:
                         arg_type = _reconcile_types(arg_type, arg.type)
@@ -298,7 +302,9 @@ class Incanter:
                         raise Exception(
                             f"Unable to reconcile types {arg_type} and {arg.type} for argument {arg_name}"
                         )
-            outer_args.append(ParameterDep(arg_name, arg_type))
+                    if arg.default is not Signature.empty:
+                        arg_default = arg.default
+            outer_args.append(ParameterDep(arg_name, arg_type, arg_default))
 
         return compile_invoke(fn, outer_args, local_vars, is_async=is_async)
 

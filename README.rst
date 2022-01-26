@@ -512,6 +512,7 @@ Changelog
 ~~~~~~~~~~~~~~~~~~
 * Properly set the return type annotation when preparing a function.
 * A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting ``Hook.factory`` to ``None``.
+* Parameters with defaults are now supported for ``incanter.prepare`` and ``incanter.a/invoke``.
 
 0.2.0 (2022-01-13)
 ~~~~~~~~~~~~~~~~~~
