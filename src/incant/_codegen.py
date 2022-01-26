@@ -24,7 +24,7 @@ def _is_async_context_manager(fn: Any) -> bool:
 class ParameterDep:
     arg_name: str
     type: Any
-    default: Signature.empty
+    default: Any = Signature.empty
 
 
 @define
