@@ -77,10 +77,12 @@ incanter.register_hook_factory(
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
+    prepared = incanter.prepare(handler, is_async=True)
+
     @wraps(handler)
     async def wrapper(**kwargs):
         log.info("Processing")
-        return await incanter.aincant(handler, log=log, **kwargs)
+        return await incanter.aincant(prepared, log=log, **kwargs)
 
     return wrapper
 

@@ -32,6 +32,13 @@ async def test_index(quickapi_server: str):
 
 
 @pytest.mark.asyncio
+async def test_async_context_manager(quickapi_server: str):
+    async with AsyncClient() as client:
+        resp = (await client.get(f"{quickapi_server}/taskgroup")).text
+        assert resp == "nice"
+
+
+@pytest.mark.asyncio
 async def test_payload_handler(quickapi_server: str):
     async with AsyncClient() as client:
         resp = (await client.get(f"{quickapi_server}/header")).text

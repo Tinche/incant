@@ -32,7 +32,7 @@ Going by the old, humorous adage that dependency injection is simply passing arg
 * a method for registering dependencies: ``Incanter.register_hook()``, and a number of higher level, more user-friendly aliases
 * methods for invoking arbitrary functions while injecting dependencies: ``Incanter.invoke()`` and its async variant, ``Incanter.ainvoke()``
 * a method for getting the parameters of an arbitrary function after injecting dependencies: ``Incanter.parameters()``
-* methods for invoking arbitrary functions while injecting dependencies and forwarding any required arguments: ``Incanter.incant`` and its async variant, ``Incanter.aincant``
+* methods for invoking arbitrary functions while picking and forwarding any required arguments: ``Incanter.incant`` and its async variant, ``Incanter.aincant``
 
 `incant` is able to leverage runtime type annotations, but is also capable of functioning without them.
 `incant` is also fully type-annotated for use with Mypy and smart editors.
@@ -207,9 +207,9 @@ You change the ``quickapi`` decorator to create and use a logger with the curren
         return wrapper
 
 You can't make the logger a dependency within the ``Incanter`` though, since it depends on handler-specific data.
-(You could have a separate incanter for each handler, but that's very inefficient.)
+(You could have a separate incanter for each handler, but that's inefficient.)
 
-If the incanter cannot find a dependency to fulfil a parameter, you need to provide it yourself - just like wiith the path parameters.
+If the incanter cannot find a dependency to fulfil a parameter, you need to provide it yourself - just like with the path parameters.
 Since the ``index`` and ``ip_address_handler`` don't require the logger, we can keep invoking them as before.
 However, the ``logging_handler`` handler requires it. Without changes, invoking the handler will let you know:
 
@@ -219,16 +219,19 @@ However, the ``logging_handler`` handler requires it. Without changes, invoking 
 
 You change the ``quickapi`` decorator to use ``Incanter.aincant`` (the async version of ``Incanter.incant``) and always pass in the logger instance.
 ``incant`` is meant for cases like this, forwarding the parameters if they are needed and skipping them otherwise.
+Since ``incant`` doesn't itself call ``invoke``, you prepare it yourself before hand.
 
 .. code-block:: python
 
     def quickapi(handler):
         log = logger.bind(handler=handler.__name__)
 
+        prepared = incanter.prepare(handler)
+
         @wraps(handler)
         async def wrapper(**kwargs):
             log.info("Processing")
-            return await incanter.aincant(handler, log=log, **kwargs)
+            return await incanter.aincant(prepared, log=log, **kwargs)
 
         return wrapper
 
@@ -495,8 +498,9 @@ Also be aware that since in Python lambdas don't play well with caching, if you'
 
     >>> incanter.prepare(lambda: my_argument, additional_hooks)()  # Now uses the cache.
 
-Incanter instances also have a helper method, ``incanter.incant`` (and ``incanter.aincant``), that serves as a smart wrapper around ``incanter.invoke``.
-``incant`` filters out unnecessary arguments before calling ``invoke``, and is a useful tool for building generic components.
+Incanter instances also have a helper method, ``incanter.incant`` (and ``incanter.aincant``), that serves as a smart helper for calling functions.
+``incanter.incant`` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
+``incanter.incant`` also composes nicely with ``prepare``, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
 
 ``register_by_name`` and ``register_by_type`` delegate to ``incanter.register_hook``.
 ``register_hook`` takes a predicate function and a dependency factory.
@@ -513,6 +517,7 @@ Changelog
 * Properly set the return type annotation when preparing a function.
 * A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting ``Hook.factory`` to ``None``.
 * Parameters with defaults are now supported for ``incanter.prepare`` and ``incanter.a/invoke``.
+* ``incanter.a/incant`` no longer uses ``invoke`` under the hood, to allow greater customization. Previous behavior can be replicated by ``incant(prepare(fn))``.
 
 0.2.0 (2022-01-13)
 ~~~~~~~~~~~~~~~~~~

@@ -168,14 +168,9 @@ class Incanter:
     ) -> List[Union[int, str]]:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
         pos_arg_plan: List[Union[int, str]] = []
-        prepared_fn = (
-            self._invoke_cache(fn)
-            if not is_async
-            else self._invoke_cache(fn, is_async=True)
-        )
         pos_args_by_type = {a: ix for ix, a in enumerate(pos_args_types)}
         kwarg_names = {kw[0] for kw in kwargs}
-        sig = signature(prepared_fn)
+        sig = signature(fn)
         for arg_name, arg in sig.parameters.items():
             if (
                 arg.annotation is not Signature.empty
@@ -200,16 +195,11 @@ class Incanter:
         kwargs_by_name_and_type: Set,
         is_async: Optional[bool] = False,
     ) -> Callable:
-        prepared_fn = (
-            self._invoke_cache(fn)
-            if not is_async
-            else self._invoke_cache(fn, is_async=True)
-        )
         plan = self._gen_incant_plan(
-            prepared_fn, pos_args_types, kwargs_by_name_and_type, is_async=is_async
+            fn, pos_args_types, kwargs_by_name_and_type, is_async=is_async
         )
         incant = compile_incant_wrapper(
-            prepared_fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
+            fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
         )
         return incant
 
