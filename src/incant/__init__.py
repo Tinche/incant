@@ -43,6 +43,13 @@ Dep = Union[FactoryDep, ParameterDep]
 PredicateFn = Callable[[Parameter], bool]
 
 
+def is_subclass(type, superclass) -> bool:
+    try:
+        return issubclass(type, superclass)
+    except Exception:
+        return False
+
+
 @frozen
 class Hook:
     predicate: PredicateFn
@@ -132,7 +139,7 @@ class Incanter:
                     raise Exception("No return type found, provide a type.")
         else:
             type_to_reg = type
-        self.register_hook(lambda p: issubclass(p.annotation, type_to_reg), fn)
+        self.register_hook(lambda p: is_subclass(p.annotation, type_to_reg), fn)
 
     def register_hook(self, predicate: PredicateFn, factory: Callable):
         self.register_hook_factory(predicate, lambda _: factory)
@@ -217,8 +224,12 @@ class Incanter:
                 sig = signature(node)
                 dependents: List[Union[ParameterDep, FactoryDep]] = []
                 for name, param in sig.parameters.items():
-                    if node is not fn and param.default is not Signature.empty:
-                        # Do not expose optional params of dependencies.
+                    if (
+                        node is not fn
+                        and param.default is not Signature.empty
+                        and param.kind is Parameter.KEYWORD_ONLY
+                    ):
+                        # Do not expose optional kw-only params of dependencies.
                         continue
                     param_type = param.annotation
                     for hook in hooks:
@@ -275,7 +286,7 @@ class Incanter:
         for arg in outer_args:
             per_outer_arg.setdefault(arg.arg_name, []).append(arg)
 
-        outer_args = []
+        outer_args.clear()
         for arg_name, args in per_outer_arg.items():
             if len(args) == 1:
                 arg_type = args[0].type
@@ -296,6 +307,8 @@ class Incanter:
                         arg_default = arg.default
             outer_args.append(ParameterDep(arg_name, arg_type, arg_default))
 
+        # outer_args need to be sorted by the presence of a default value
+        outer_args.sort(key=lambda a: a.default is not Signature.empty)
         return compile_invoke(fn, outer_args, local_vars, is_async=is_async)
 
 

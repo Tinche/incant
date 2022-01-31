@@ -158,3 +158,17 @@ def test_no_return_type(incanter: Incanter):
 
     with pytest.raises(Exception):
         incanter.register_by_type(dep)
+
+
+def test_optional_arg(incanter: Incanter):
+    """Registering by type with no return type is an error."""
+
+    @incanter.register_by_name
+    def dep(i=1):
+        return i
+
+    assert incanter.invoke(lambda dep: dep + 1) == 2
+    assert incanter.invoke(lambda dep: dep + 1, 2) == 3
+    assert signature(incanter.prepare(lambda dep: dep + 1)).parameters == {
+        "i": Parameter("i", Parameter.POSITIONAL_OR_KEYWORD, default=1)
+    }

@@ -518,6 +518,7 @@ Changelog
 * A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting ``Hook.factory`` to ``None``.
 * Parameters with defaults are now supported for ``incanter.prepare`` and ``incanter.a/invoke``.
 * ``incanter.a/incant`` no longer uses ``invoke`` under the hood, to allow greater customization. Previous behavior can be replicated by ``incant(prepare(fn))``.
+* Optional arguments of dependencies can now be propagated to final function arguments. Keyword-only arguments of dependencies are still filtered out.
 
 0.2.0 (2022-01-13)
 ~~~~~~~~~~~~~~~~~~
