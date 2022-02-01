@@ -172,3 +172,14 @@ def test_optional_arg(incanter: Incanter):
     assert signature(incanter.prepare(lambda dep: dep + 1)).parameters == {
         "i": Parameter("i", Parameter.POSITIONAL_OR_KEYWORD, default=1)
     }
+
+
+def test_same_type_arg_coalescing(incanter: Incanter):
+    @incanter.register_by_name
+    def dep(i: int) -> int:
+        return 1
+
+    def fn(i: int, dep: int) -> int:
+        return i + dep
+
+    assert incanter.invoke(fn, 1) == 2

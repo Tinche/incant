@@ -317,4 +317,6 @@ def _reconcile_types(type_a, type_b):
         return type_b
     if type_b is Signature.empty:
         return type_a
+    if type_a is type_b:
+        return type_a
     raise Exception(f"Unable to reconcile types {type_a!r} and {type_b!r}")
