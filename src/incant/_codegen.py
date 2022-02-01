@@ -35,6 +35,7 @@ class LocalVarFactory:
 
 def compile_invoke(
     fn: Callable,
+    fn_factory_args: List[str],
     outer_args: List[ParameterDep],
     local_vars: List[LocalVarFactory],
     is_async: bool = False,
@@ -101,7 +102,7 @@ def compile_invoke(
     incant_arg_lines = []
     local_var_ix = len(local_vars) - 1
     for name in sig.parameters:
-        if name in outer_arg_names:
+        if name not in fn_factory_args and name in outer_arg_names:
             incant_arg_lines.append(name)
         else:
             incant_arg_lines.append(f"_incant_local_{local_var_ix}")

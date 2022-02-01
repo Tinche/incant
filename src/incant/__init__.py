@@ -31,10 +31,10 @@ _type = type
 R = TypeVar("R")
 
 
-@define
+@frozen
 class FactoryDep:
-    factory: Callable
-    arg_name: str
+    factory: Callable  # The fn to call.
+    arg_name: str  # The name of the param this is fulfulling.
 
 
 Dep = Union[FactoryDep, ParameterDep]
@@ -257,7 +257,7 @@ class Incanter:
     ):
         dep_tree = self._gen_dep_tree(fn, hooks)
 
-        local_vars = []
+        local_vars: List[LocalVarFactory] = []
 
         # is_async = None means autodetect
         if is_async is None:
@@ -309,7 +309,15 @@ class Incanter:
 
         # outer_args need to be sorted by the presence of a default value
         outer_args.sort(key=lambda a: a.default is not Signature.empty)
-        return compile_invoke(fn, outer_args, local_vars, is_async=is_async)
+
+        fn_factory_args = []
+        for dep in dep_tree[-1][1]:
+            if isinstance(dep, FactoryDep):
+                fn_factory_args.append(dep.arg_name)
+
+        return compile_invoke(
+            fn, fn_factory_args, outer_args, local_vars, is_async=is_async
+        )
 
 
 def _reconcile_types(type_a, type_b):

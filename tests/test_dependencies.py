@@ -72,6 +72,17 @@ def test_nested_partial_deps_with_args(incanter: Incanter):
     assert incanter.invoke(func, 1, 5.0) == 10.0
 
 
+def test_nested_partial_deps_with_coalesce(incanter: Incanter):
+    @incanter.register_by_type
+    def dep(arg: float) -> str:
+        return str(arg + 1)
+
+    def fn(arg: str):
+        return "1.0" + arg
+
+    assert incanter.invoke(fn, 1.0) == "1.02.0"
+
+
 def test_shared_deps(incanter: Incanter):
     incanter.register_by_name(lambda dep2, input: dep2 + input + 1, name="dep1")
     incanter.register_by_name(lambda: 2, name="dep2")
