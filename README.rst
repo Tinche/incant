@@ -512,7 +512,7 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
-0.3.0 (UNRELEASED)
+0.3.0 (2022-02-03)
 ~~~~~~~~~~~~~~~~~~
 * Properly set the return type annotation when preparing a function.
 * A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting ``Hook.factory`` to ``None``.
