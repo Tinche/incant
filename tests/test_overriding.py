@@ -1,6 +1,7 @@
 from inspect import Parameter, signature
+from typing import Annotated
 
-from incant import Hook, Incanter
+from incant import Hook, Incanter, Override
 
 
 def test_simple_override(incanter: Incanter):
@@ -38,3 +39,23 @@ def test_override_to_parameter(incanter: Incanter):
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD, annotation=int)
     }
     assert signature(incanter.prepare(fn)).parameters == {}
+
+
+def test_individial_param_overriding_name(incanter: Incanter):
+    """A function param can be overridden."""
+    incanter.register_by_name(lambda: 5, name="dep2")
+
+    def fn(dep1: Annotated[int, Override(name="dep2")]):
+        return dep1
+
+    assert incanter.invoke(fn) == 5
+
+
+def test_individial_param_overriding_type(incanter: Incanter):
+    """A function param can be overridden."""
+    incanter.register_by_type(lambda: 5, type=int)
+
+    def fn(dep1: Annotated[str, Override(annotation=int)]):
+        return dep1
+
+    assert incanter.invoke(fn) == 5

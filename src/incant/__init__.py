@@ -1,5 +1,6 @@
 from functools import lru_cache
 from inspect import Parameter, Signature, iscoroutinefunction, signature
+from typing import _AnnotatedAlias  # type: ignore
 from typing import (
     Any,
     Awaitable,
@@ -29,6 +30,13 @@ _type = type
 
 
 R = TypeVar("R")
+NO_OVERRIDE = object()
+
+
+@frozen
+class Override:
+    name: Optional[str] = None
+    annotation: Any = NO_OVERRIDE
 
 
 @frozen
@@ -221,7 +229,8 @@ class Incanter:
             _nodes = to_process
             to_process = []
             for node in _nodes:
-                sig = signature(node)
+                sig = _signature(node)
+                print(sig)
                 dependents: List[Union[ParameterDep, FactoryDep]] = []
                 for name, param in sig.parameters.items():
                     if (
@@ -328,3 +337,24 @@ def _reconcile_types(type_a, type_b):
     if type_a is type_b:
         return type_a
     raise Exception(f"Unable to reconcile types {type_a!r} and {type_b!r}")
+
+
+def _signature(f: Callable) -> Signature:
+    """Return the signature of f, with potential overrides applied."""
+    sig = signature(f)
+    parameters = [_get_annotated_override(val) for val in sig.parameters.values()]
+    return sig.replace(parameters=parameters)
+
+
+def _get_annotated_override(p: Parameter) -> Parameter:
+    if p.annotation.__class__ is _AnnotatedAlias:
+        for arg in p.annotation.__metadata__:
+            if isinstance(arg, Override):
+                name = arg.name if arg.name is not None else p.name
+                an = (
+                    arg.annotation
+                    if arg.annotation is not NO_OVERRIDE
+                    else p.annotation
+                )
+                return Parameter(name, p.kind, default=p.default, annotation=an)
+    return p
