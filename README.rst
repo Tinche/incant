@@ -514,8 +514,8 @@ Changelog
 ---------
 0.4.0 (UNRELEASED)
 ~~~~~~~~~~~~~~~~~~
-* Injection can be customized on a per-parameter basis by annotating a parameter with ``Annotated[type, incant.Override(...)]`.
-`
+* Injection can be customized on a per-parameter basis by annotating a parameter with ``Annotated[type, incant.Override(...)]``.
+
 0.3.0 (2022-02-03)
 ~~~~~~~~~~~~~~~~~~
 * Properly set the return type annotation when preparing a function.
