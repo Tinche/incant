@@ -15,7 +15,7 @@ class Override:
 
 
 if version_info >= (3, 9):
-    from typing import _AnnotatedAlias
+    from typing import _AnnotatedAlias  # type: ignore
 
 else:
     from typing_extensions import _AnnotatedAlias
