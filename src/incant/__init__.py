@@ -1,6 +1,5 @@
 from functools import lru_cache
 from inspect import Parameter, Signature, iscoroutinefunction, signature
-from typing import _AnnotatedAlias  # type: ignore
 from typing import (
     Any,
     Awaitable,
@@ -24,19 +23,15 @@ from ._codegen import (
     compile_incant_wrapper,
     compile_invoke,
 )
+from ._compat import NO_OVERRIDE, Override, get_annotated_override
 
+
+__all__ = ["NO_OVERRIDE", "Override", "Hook", "Incanter"]
 
 _type = type
 
 
 R = TypeVar("R")
-NO_OVERRIDE = object()
-
-
-@frozen
-class Override:
-    name: Optional[str] = None
-    annotation: Any = NO_OVERRIDE
 
 
 @frozen
@@ -342,19 +337,5 @@ def _reconcile_types(type_a, type_b):
 def _signature(f: Callable) -> Signature:
     """Return the signature of f, with potential overrides applied."""
     sig = signature(f)
-    parameters = [_get_annotated_override(val) for val in sig.parameters.values()]
+    parameters = [get_annotated_override(val) for val in sig.parameters.values()]
     return sig.replace(parameters=parameters)
-
-
-def _get_annotated_override(p: Parameter) -> Parameter:
-    if p.annotation.__class__ is _AnnotatedAlias:
-        for arg in p.annotation.__metadata__:
-            if isinstance(arg, Override):
-                name = arg.name if arg.name is not None else p.name
-                an = (
-                    arg.annotation
-                    if arg.annotation is not NO_OVERRIDE
-                    else p.annotation
-                )
-                return Parameter(name, p.kind, default=p.default, annotation=an)
-    return p

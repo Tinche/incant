@@ -1,5 +1,10 @@
 from inspect import Parameter, signature
-from typing import Annotated
+
+
+try:
+    from typing import Annotated
+except ImportError:
+    from typing_extensions import Annotated
 
 from incant import Hook, Incanter, Override
 
