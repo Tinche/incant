@@ -5,7 +5,8 @@ A function with a single dependency; the dependency is satisfied by the containe
 """
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
-from di import Container, Dependant
+from di import Container, Dependant, SyncExecutor
+from di.container import bind_by_type
 from wired import ServiceRegistry
 
 from incant import Incanter
@@ -42,12 +43,14 @@ def wired_call_func():
 # di
 
 container = Container()
-container.bind(dep1, int)
-solved = container.solve(Dependant(func))
+executor = SyncExecutor()
+container.bind(bind_by_type(Dependant(dep1), int))
+solved = container.solve(Dependant(func), scopes=(None,))
 
 
 def di_call_func():
-    container.execute_sync(solved)
+    with container.enter_scope(None) as state:
+        container.execute_sync(solved, executor=executor, state=state)
 
 
 # Dependency-injector
