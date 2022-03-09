@@ -2,8 +2,9 @@ import asyncio
 
 from typing import Annotated
 
-from di import ConcurrentAsyncExecutor, Container, Dependant
-
+from di.dependant import Dependant
+from di.executors import ConcurrentAsyncExecutor
+from di.container import Container, bind_by_type
 from incant import Incanter
 
 

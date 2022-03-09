@@ -2,8 +2,9 @@ import asyncio
 
 from typing import Annotated
 
-from di import Container, Dependant, AsyncExecutor
-
+from di.dependant import Dependant
+from di.executors import ConcurrentAsyncExecutor
+from di.container import Container
 from incant import Incanter
 
 
@@ -42,7 +43,7 @@ def di_func(
 
 
 container = Container()
-executor = AsyncExecutor()
+executor = ConcurrentAsyncExecutor()
 solved = container.solve(Dependant(di_func), scopes=[None])
 
 

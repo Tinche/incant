@@ -5,7 +5,9 @@ A function with two dependencies; the first depends on the other, and the other 
 """
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
-from di import Container, Dependant, SyncExecutor
+from di.dependant import Dependant
+from di.executors import SyncExecutor
+from di.container import Container, bind_by_type
 from di.container import bind_by_type
 from wired import ServiceRegistry
 

@@ -5,8 +5,9 @@ A function with a single dependency; the dependency is satisfied by the containe
 """
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
-from di import Container, Dependant, SyncExecutor
-from di.container import bind_by_type
+from di.dependant import Dependant
+from di.executors import SyncExecutor
+from di.container import Container, bind_by_type
 from wired import ServiceRegistry
 
 from incant import Incanter
