@@ -2,8 +2,9 @@ import asyncio
 
 from typing import Annotated
 
-from di import Container, Dependant
-
+from di.dependant import Dependant
+from di.executors import ConcurrentAsyncExecutor
+from di.container import Container
 from incant import Incanter
 
 
@@ -42,8 +43,14 @@ def di_func(
 
 
 container = Container()
-solved = container.solve(Dependant(di_func))
+executor = ConcurrentAsyncExecutor()
+solved = container.solve(Dependant(di_func), scopes=[None])
+
+
+async def di_execute():
+    async with container.enter_scope(None) as state:
+        await container.execute_async(solved, state=state, executor=executor)
 
 
 def di_call_func():
-    asyncio.run(container.execute_async(solved))
+    asyncio.run(di_execute())
