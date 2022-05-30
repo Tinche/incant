@@ -22,6 +22,7 @@ from ._codegen import (
     ParameterDep,
     compile_incant_wrapper,
     compile_invoke,
+    is_async_context_manager,
 )
 from ._compat import NO_OVERRIDE, Override, get_annotated_override
 
@@ -282,7 +283,10 @@ class Incanter:
 
         # is_async = None means autodetect
         if is_async is None:
-            is_async = any(iscoroutinefunction(factory) for factory, _ in dep_tree)
+            is_async = any(
+                iscoroutinefunction(factory) or is_async_context_manager(factory)
+                for factory, _ in dep_tree
+            )
 
         # All non-parameter deps become local vars.
         for ix, (factory, deps) in enumerate(dep_tree[:-1]):

@@ -12,7 +12,7 @@ from typing import Any, Callable, List, Union
 from attr import define
 
 
-def _is_async_context_manager(fn: Any) -> bool:
+def is_async_context_manager(fn: Any) -> bool:
     return (
         fn.__class__ is type and issubclass(fn, AbstractAsyncContextManager)
     ) or bool(
@@ -106,7 +106,7 @@ def compile_invoke(
 
         local_name = f"_incant_local_{local_counter}"
 
-        if _is_async_context_manager(local_var.factory):
+        if is_async_context_manager(local_var.factory):
             if not local_var.is_forced:
                 lines.append(
                     f"  {' ' * ind}async with {local_var_factory_name}({', '.join(local_arg_lines)}) as {local_name}:"
