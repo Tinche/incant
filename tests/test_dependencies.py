@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from contextlib import contextmanager
 from inspect import Parameter, signature
 
 import pytest
@@ -209,3 +210,57 @@ def test_shared_deps(incanter: Incanter) -> None:
         return dep2 + dep1
 
     assert incanter.invoke(fn) == 15
+
+
+def test_ctx_manager_dep(incanter: Incanter):
+    """Context manager dependencies work."""
+    entered, exited = False, False
+
+    @incanter.register_by_name
+    @contextmanager
+    def dep1():
+        nonlocal entered, exited
+        assert not entered
+        assert not exited
+        entered = True
+        yield 1
+        assert entered
+        assert not exited
+        exited = True
+
+    def fn(dep1: int) -> int:
+        nonlocal entered
+        assert entered
+        return dep1 + 1
+
+    assert incanter.invoke(fn) == 2
+
+    assert entered
+    assert exited
+
+
+def test_forced_ctx_manager_dep(incanter: Incanter):
+    """Forced context manager dependencies work."""
+    entered, exited = False, False
+
+    @incanter.register_by_name
+    @contextmanager
+    def dep1():
+        nonlocal entered, exited
+        assert not entered
+        assert not exited
+        entered = True
+        yield 1
+        assert entered
+        assert not exited
+        exited = True
+
+    def fn(i: int) -> int:
+        nonlocal entered
+        assert entered
+        return i + 1
+
+    assert incanter.prepare(fn, forced_deps=[dep1])(1) == 2
+
+    assert entered
+    assert exited

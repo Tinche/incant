@@ -10,7 +10,6 @@ from quattro import TaskGroup
 from incant import Incanter
 
 
-@pytest.mark.asyncio
 async def test_async_invoke(incanter: Incanter):
     async def fn():
         await sleep(0.001)
@@ -19,7 +18,6 @@ async def test_async_invoke(incanter: Incanter):
     assert (await incanter.ainvoke(fn)) == 2
 
 
-@pytest.mark.asyncio
 async def test_async_dep(incanter: Incanter):
     @incanter.register_by_name
     async def dep1() -> int:
@@ -34,7 +32,6 @@ async def test_async_dep(incanter: Incanter):
     ).parameters == OrderedDict([])
 
 
-@pytest.mark.asyncio
 async def test_async_mixed_dep(incanter: Incanter):
     @incanter.register_by_name
     async def dep1(dep2) -> int:
@@ -55,7 +52,6 @@ async def test_async_mixed_dep(incanter: Incanter):
     )
 
 
-@pytest.mark.asyncio
 async def test_async_ctx_manager_dep(incanter: Incanter):
     """Async context manager dependencies work."""
     entered, exited = False, False
@@ -78,7 +74,6 @@ async def test_async_ctx_manager_dep(incanter: Incanter):
     assert exited
 
 
-@pytest.mark.asyncio
 async def test_taskgroup_dep(incanter: Incanter):
     """Async context manager dependencies work."""
     incanter.register_by_type(TaskGroup)

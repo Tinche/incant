@@ -1,10 +1,11 @@
 import linecache
 
-from contextlib import AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from inspect import (
     Signature,
     isasyncgenfunction,
     iscoroutinefunction,
+    isgeneratorfunction,
     signature,
 )
 from typing import Any, Callable, List, Union
@@ -17,6 +18,12 @@ def is_async_context_manager(fn: Any) -> bool:
         fn.__class__ is type and issubclass(fn, AbstractAsyncContextManager)
     ) or bool(
         (wrapped := getattr(fn, "__wrapped__", None)) and isasyncgenfunction(wrapped)
+    )
+
+
+def is_context_manager(fn: Any) -> bool:
+    return (fn.__class__ is type and issubclass(fn, AbstractContextManager)) or bool(
+        (wrapped := getattr(fn, "__wrapped__", None)) and isgeneratorfunction(wrapped)
     )
 
 
@@ -106,21 +113,23 @@ def compile_invoke(
 
         local_name = f"_incant_local_{local_counter}"
 
-        if is_async_context_manager(local_var.factory):
+        if is_async_context_manager(local_var.factory) or is_context_manager(
+            local_var.factory
+        ):
+            aw = "async " if is_async_context_manager(local_var.factory) else ""
             if not local_var.is_forced:
                 lines.append(
-                    f"  {' ' * ind}async with {local_var_factory_name}({', '.join(local_arg_lines)}) as {local_name}:"
+                    f"  {' ' * ind}{aw}with {local_var_factory_name}({', '.join(local_arg_lines)}) as {local_name}:"
                 )
                 local_counter += 1
             else:
                 lines.append(
-                    f"  {' ' * ind}async with {local_var_factory_name}({', '.join(local_arg_lines)}):"
+                    f"  {' ' * ind}{aw}with {local_var_factory_name}({', '.join(local_arg_lines)}):"
                 )
             ind += 2
         else:
-            aw = ""
-            if iscoroutinefunction(local_var.factory):
-                aw = "await "
+
+            aw = "await " if iscoroutinefunction(local_var.factory) else ""
             if not local_var.is_forced:
                 lines.append(
                     f"  {' ' * ind}{local_name} = {aw}{local_var_factory_name}({', '.join(local_arg_lines)})"
@@ -140,9 +149,7 @@ def compile_invoke(
             incant_arg_lines.append(f"_incant_local_{local_var_ix}")
             local_var_ix -= 1
 
-    aw = ""
-    if iscoroutinefunction(fn):
-        aw = "await "
+    aw = "await " if iscoroutinefunction(fn) else ""
     lines.append(
         f"  {' ' * ind}return {aw}_incant_inner_fn({', '.join(incant_arg_lines)})"
     )

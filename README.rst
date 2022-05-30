@@ -515,6 +515,8 @@ Changelog
 0.4.0 (UNRELEASED)
 ~~~~~~~~~~~~~~~~~~
 * Injection can be customized on a per-parameter basis by annotating a parameter with ``Annotated[type, incant.Override(...)]``.
+* Implement support for forced dependencies.
+* Sync context managers may now be dependencies.
 
 0.3.0 (2022-02-03)
 ~~~~~~~~~~~~~~~~~~

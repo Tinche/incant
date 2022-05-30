@@ -130,6 +130,7 @@ class Incanter:
         if name is None:
             name = fn.__name__
         self.register_hook(lambda p: p.name == name, fn)
+        return fn
 
     def register_by_type(self, fn: Union[Callable, Type], type: Optional[Type] = None):
         """
@@ -149,13 +150,14 @@ class Incanter:
         else:
             type_to_reg = type
         self.register_hook(lambda p: is_subclass(p.annotation, type_to_reg), fn)
+        return fn
 
-    def register_hook(self, predicate: PredicateFn, factory: Callable):
+    def register_hook(self, predicate: PredicateFn, factory: Callable) -> None:
         self.register_hook_factory(predicate, lambda _: factory)
 
     def register_hook_factory(
         self, predicate: PredicateFn, hook_factory: Callable[[Parameter], Callable]
-    ):
+    ) -> None:
         self.hook_factory_registry.insert(0, Hook(predicate, hook_factory))
         self._invoke_cache.cache_clear()  # type: ignore
         self._incant_cache.cache_clear()  # type: ignore
@@ -290,7 +292,9 @@ class Incanter:
 
         # All non-parameter deps become local vars.
         for ix, (factory, deps) in enumerate(dep_tree[:-1]):
-            if not is_async and iscoroutinefunction(factory):
+            if not is_async and (
+                iscoroutinefunction(factory) or is_async_context_manager(factory)
+            ):
                 raise TypeError(
                     f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
                 )
