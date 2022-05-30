@@ -31,6 +31,7 @@ class ParameterDep:
 class LocalVarFactory:
     factory: Callable
     args: List[Union[Callable, ParameterDep]]
+    is_forced: bool = False
 
 
 def compile_invoke(
@@ -45,11 +46,18 @@ def compile_invoke(
     sig = signature(fn)
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
     globs = {"_incant_inner_fn": fn}
+    taken_local_vars = set()
     arg_lines = []
+
     for dep in outer_args:
         if dep.type is not Signature.empty:
-            arg_type_snippet = f": _incant_arg_{dep.arg_name}"
-            globs[f"_incant_arg_{dep.arg_name}"] = dep.type
+            type_name = dep.type.__name__
+            if type_name not in globs or globs[type_name] is dep.type:
+                arg_type_snippet = f": {type_name}"
+                globs[type_name] = dep.type
+            else:
+                arg_type_snippet = f": _incant_arg_{dep.arg_name}"
+                globs[f"_incant_arg_{dep.arg_name}"] = dep.type
         else:
             arg_type_snippet = ""
         if dep.default is not Signature.empty:
@@ -58,6 +66,7 @@ def compile_invoke(
             globs[arg_default] = dep.default
 
         arg_lines.append(f"{dep.arg_name}{arg_type_snippet}")
+        taken_local_vars.add(dep.arg_name)
     outer_arg_names = {o.arg_name for o in outer_args}
 
     lines = []
@@ -74,10 +83,18 @@ def compile_invoke(
         local_var.factory: ix for ix, local_var in enumerate(local_vars)
     }
     ind = 0  # Indentation level
+
+    local_counter = 0
+
     for i, local_var in enumerate(local_vars):
-        local_name = f"_incant_local_{i}"
-        local_var_factory = f"_incant_local_factory_{i}"
-        globs[local_var_factory] = local_var.factory
+        local_var_fn = local_var.factory.__name__
+
+        if local_var_fn not in taken_local_vars and local_var_fn != "<lambda>":
+            local_var_factory_name = local_var_fn
+        else:
+            local_var_factory_name = f"_incant_local_factory_{i}"
+        globs[local_var_factory_name] = local_var.factory
+
         local_arg_lines = []
         for local_arg in local_var.args:
             if isinstance(local_arg, ParameterDep):
@@ -86,21 +103,36 @@ def compile_invoke(
                 local_arg_lines.append(
                     f"_incant_local_{local_vars_ix_by_factory[local_arg]}"
                 )
+
+        local_name = f"_incant_local_{local_counter}"
+
         if _is_async_context_manager(local_var.factory):
-            lines.append(
-                f"  {' ' * ind}async with {local_var_factory}({', '.join(local_arg_lines)}) as {local_name}:"
-            )
+            if not local_var.is_forced:
+                lines.append(
+                    f"  {' ' * ind}async with {local_var_factory_name}({', '.join(local_arg_lines)}) as {local_name}:"
+                )
+                local_counter += 1
+            else:
+                lines.append(
+                    f"  {' ' * ind}async with {local_var_factory_name}({', '.join(local_arg_lines)}):"
+                )
             ind += 2
         else:
             aw = ""
             if iscoroutinefunction(local_var.factory):
                 aw = "await "
-            lines.append(
-                f"  {' ' * ind}{local_name} = {aw}{local_var_factory}({', '.join(local_arg_lines)})"
-            )
+            if not local_var.is_forced:
+                lines.append(
+                    f"  {' ' * ind}{local_name} = {aw}{local_var_factory_name}({', '.join(local_arg_lines)})"
+                )
+                local_counter += 1
+            else:
+                lines.append(
+                    f"  {' ' * ind}{aw}{local_var_factory_name}({', '.join(local_arg_lines)})"
+                )
 
     incant_arg_lines = []
-    local_var_ix = len(local_vars) - 1
+    local_var_ix = len([lv for lv in local_vars if not lv.is_forced]) - 1
     for name in sig.parameters:
         if name not in fn_factory_args and name in outer_arg_names:
             incant_arg_lines.append(name)

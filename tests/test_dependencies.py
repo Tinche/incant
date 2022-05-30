@@ -83,7 +83,7 @@ def test_nested_partial_deps_with_coalesce(incanter: Incanter):
     assert incanter.invoke(fn, 1.0) == "1.02.0"
 
 
-def test_shared_deps(incanter: Incanter):
+def test_shared_params(incanter: Incanter):
     incanter.register_by_name(lambda dep2, input: dep2 + input + 1, name="dep1")
     incanter.register_by_name(lambda: 2, name="dep2")
 
@@ -194,3 +194,18 @@ def test_same_type_arg_coalescing(incanter: Incanter):
         return i + dep
 
     assert incanter.invoke(fn, 1) == 2
+
+
+def test_shared_deps(incanter: Incanter) -> None:
+    @incanter.register_by_name
+    def dep1() -> int:
+        return 5
+
+    @incanter.register_by_name
+    def dep2(dep1: int) -> int:
+        return dep1 + 5
+
+    def fn(dep2: int, dep1: int) -> int:
+        return dep2 + dep1
+
+    assert incanter.invoke(fn) == 15

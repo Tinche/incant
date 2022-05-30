@@ -92,8 +92,13 @@ class Incanter:
         fn: Callable[..., R],
         hooks: Sequence[Hook] = (),
         is_async: Optional[bool] = None,
+        forced_deps: Sequence[Callable] = (),
     ) -> Callable[..., R]:
-        return self._invoke_cache(fn, tuple(hooks), is_async)
+        """Prepare a new function, encapsulating satisfied dependencies.
+
+        forced_deps: A sequence of dependencies that will be called even if `fn` doesn't require them explicitly.
+        """
+        return self._invoke_cache(fn, tuple(hooks), is_async, tuple(forced_deps))
 
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
         return self.prepare(fn, is_async=False)(*args, **kwargs)
@@ -214,18 +219,26 @@ class Incanter:
         return incant
 
     def _gen_dep_tree(
-        self, fn: Callable, additional_hooks: Sequence[Hook]
+        self,
+        fn: Callable,
+        additional_hooks: Sequence[Hook],
+        forced_deps: Sequence[Callable] = (),
     ) -> List[Tuple[Callable, List[Dep]]]:
-        """Generate the dependency tree for `fn`."""
-        to_process = [fn]
+        """Generate the dependency tree for `fn`.
+
+        The dependency tree is a list of factories and their dependencies.
+
+        The actual function is the last item.
+        """
+        to_process = [fn, *forced_deps]
         final_nodes: List[Tuple[Callable, List[Dep]]] = []
         hooks = list(additional_hooks) + self.hook_factory_registry
+        already_processed_hooks = set()
         while to_process:
             _nodes = to_process
             to_process = []
             for node in _nodes:
                 sig = _signature(node)
-                print(sig)
                 dependents: List[Union[ParameterDep, FactoryDep]] = []
                 for name, param in sig.parameters.items():
                     if (
@@ -245,8 +258,11 @@ class Incanter:
                                 )
                             else:
                                 factory = hook.factory(param)
-                                to_process.append(factory)
+                                if factory not in already_processed_hooks:
+                                    to_process.append(factory)
+                                    already_processed_hooks.add(factory)
                                 dependents.append(FactoryDep(factory, name))
+
                             break
                     else:
                         dependents.append(ParameterDep(name, param_type, param.default))
@@ -258,20 +274,34 @@ class Incanter:
         fn: Callable,
         hooks: Tuple[Hook, ...] = (),
         is_async: Optional[bool] = False,
+        forced_deps: Tuple[Callable, ...] = (),
     ):
-        dep_tree = self._gen_dep_tree(fn, hooks)
+        dep_tree = self._gen_dep_tree(fn, hooks, forced_deps)
 
         local_vars: List[LocalVarFactory] = []
 
         # is_async = None means autodetect
         if is_async is None:
             is_async = any(iscoroutinefunction(factory) for factory, _ in dep_tree)
+
         # All non-parameter deps become local vars.
-        for factory, deps in dep_tree[:-1]:
+        for ix, (factory, deps) in enumerate(dep_tree[:-1]):
             if not is_async and iscoroutinefunction(factory):
-                raise Exception(
+                raise TypeError(
                     f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
                 )
+
+            # It's possible this is a forced dependency, and nothing downstream actually needs it.
+            # In that case, we mark it as forced so it doesn't get its own local var in the generated function.
+            is_needed = False
+            for _, downstream_deps in dep_tree[ix + 1 :]:
+                if any(
+                    isinstance(d, FactoryDep) and d.factory == factory
+                    for d in downstream_deps
+                ):
+                    is_needed = True
+                    break
+
             local_vars.append(
                 LocalVarFactory(
                     factory,
@@ -279,6 +309,7 @@ class Incanter:
                         dep.factory if isinstance(dep, FactoryDep) else dep
                         for dep in deps
                     ],
+                    not is_needed,
                 )
             )
 

@@ -35,3 +35,6 @@ Home = "https://github.com/Tinche/incant"
 
 [tool.isort]
 profile = "attrs"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
