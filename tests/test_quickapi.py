@@ -1,5 +1,6 @@
 """Tests for the quickapi module."""
 from asyncio import create_task, sleep
+from sys import version_info
 from time import perf_counter
 
 import pytest
@@ -61,6 +62,9 @@ async def test_header_handler(quickapi_server: str):
         assert resp == "The header was: test"
 
 
+@pytest.mark.skipif(
+    version_info[:2] <= (3, 8), reason="Quattro cancellation not supported on 3.8"
+)
 async def test_timeout(quickapi_server: str):
     async with AsyncClient() as client:
         start = perf_counter()
