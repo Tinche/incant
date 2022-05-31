@@ -63,8 +63,8 @@ def compile_invoke(
 
     ret_type = ""
     if sig.return_annotation is not Signature.empty:
-        tn = sig.return_annotation.__name__
-        if tn in globs and globs[tn] is not sig.return_annotation:
+        tn = getattr(sig.return_annotation, "__name__", None)
+        if tn is None or tn in globs and globs[tn] is not sig.return_annotation:
             tn = "_incant_return_type"
         globs[tn] = sig.return_annotation
         ret_type = f" -> {tn}"
