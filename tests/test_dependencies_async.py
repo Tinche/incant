@@ -56,7 +56,7 @@ async def test_async_ctx_manager_dep(incanter: Incanter):
     """Async context manager dependencies work."""
     entered, exited = False, False
 
-    @incanter.register_by_name
+    @incanter.register_by_name(is_ctx_manager="async")
     @asynccontextmanager
     async def dep1():
         nonlocal entered, exited
@@ -76,7 +76,7 @@ async def test_async_ctx_manager_dep(incanter: Incanter):
 
 async def test_taskgroup_dep(incanter: Incanter):
     """Async context manager dependencies work."""
-    incanter.register_by_type(TaskGroup)
+    incanter.register_by_type(TaskGroup, is_ctx_manager="async")
 
     async def fn(tg: TaskGroup):
         return 2

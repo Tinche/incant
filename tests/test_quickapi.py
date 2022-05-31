@@ -1,5 +1,6 @@
 """Tests for the quickapi module."""
 from asyncio import create_task, sleep
+from time import perf_counter
 
 import pytest
 
@@ -24,21 +25,18 @@ async def quickapi_server(unused_tcp_port_factory):
     await sleep(0.2)
 
 
-@pytest.mark.asyncio
 async def test_index(quickapi_server: str):
     async with AsyncClient() as client:
         resp = (await client.get(f"{quickapi_server}/")).text
         assert resp == "OK"
 
 
-@pytest.mark.asyncio
 async def test_async_context_manager(quickapi_server: str):
     async with AsyncClient() as client:
         resp = (await client.get(f"{quickapi_server}/taskgroup")).text
         assert resp == "nice"
 
 
-@pytest.mark.asyncio
 async def test_payload_handler(quickapi_server: str):
     async with AsyncClient() as client:
         resp = (await client.get(f"{quickapi_server}/header")).text
@@ -50,7 +48,6 @@ async def test_payload_handler(quickapi_server: str):
         assert resp == "After payload"
 
 
-@pytest.mark.asyncio
 async def test_header_handler(quickapi_server: str):
     async with AsyncClient() as client:
         resp = (await client.get(f"{quickapi_server}/header")).text
@@ -62,3 +59,14 @@ async def test_header_handler(quickapi_server: str):
             )
         ).text
         assert resp == "The header was: test"
+
+
+async def test_timeout(quickapi_server: str):
+    async with AsyncClient() as client:
+        start = perf_counter()
+        resp = await client.get(
+            f"{quickapi_server}/slow", headers={"timeout": "0.1"}, timeout=1.0
+        )
+        duration = perf_counter() - start
+        assert resp.status_code == 500
+        assert duration <= 0.5

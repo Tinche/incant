@@ -103,7 +103,9 @@ async def test_async_ctx_mgr_dep(incanter: Incanter):
         assert not after
         after = True
 
-    prep = incanter.prepare(fn, is_async=True, forced_deps=(my_async_context_mgr,))
+    prep = incanter.prepare(
+        fn, is_async=True, forced_deps=((my_async_context_mgr, "async"),)
+    )
     assert await prep(5) == 1
 
 
@@ -133,7 +135,9 @@ async def test_async_ctx_mgr_with_param(incanter: Incanter):
         assert not after
         after = True
 
-    prep = incanter.prepare(fn, is_async=True, forced_deps=(my_async_context_mgr,))
+    prep = incanter.prepare(
+        fn, is_async=True, forced_deps=((my_async_context_mgr, "async"),)
+    )
     assert await prep(10.0, 5) == 1
 
 
@@ -169,5 +173,5 @@ async def test_async_ctx_mgr_with_shared_param_and_dep(incanter: Incanter):
         assert not after
         after = True
 
-    prep = incanter.prepare(fn, forced_deps=(my_async_context_mgr,))
+    prep = incanter.prepare(fn, forced_deps=((my_async_context_mgr, "async"),))
     assert await prep(10.0) == 1

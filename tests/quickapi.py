@@ -1,12 +1,13 @@
+from asyncio import sleep
 from functools import wraps
 from inspect import Parameter
 from ipaddress import IPv4Address
-from typing import NewType
+from typing import ContextManager, NewType
 
 from attrs import define, has
 from cattrs import structure
 from quart import Quart, request
-from quattro import TaskGroup
+from quattro import CancelScope, TaskGroup, fail_after
 from structlog.stdlib import BoundLogger, get_logger
 from werkzeug.exceptions import BadRequest
 
@@ -19,6 +20,10 @@ logger = get_logger()
 
 
 Header = NewType("Header", str)
+
+
+def apply_timeout(timeout: Header = Header("1.0")) -> ContextManager[CancelScope]:
+    return fail_after(float(timeout))
 
 
 def make_attrs_payload_factory(attrs_cls: type):
@@ -35,7 +40,7 @@ def make_attrs_payload_factory(attrs_cls: type):
 incanter.register_hook_factory(
     lambda p: has(p.annotation), lambda p: make_attrs_payload_factory(p.annotation)
 )
-incanter.register_by_type(TaskGroup)
+incanter.register_by_type(TaskGroup, is_ctx_manager="async")
 
 
 @incanter.register_by_type
@@ -77,7 +82,9 @@ incanter.register_hook_factory(
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(handler, is_async=True)
+    prepared = incanter.prepare(
+        handler, is_async=True, forced_deps=[(apply_timeout, "sync")]
+    )
 
     @wraps(handler)
     async def wrapper(**kwargs):
@@ -145,6 +152,13 @@ async def taskgroup_handler(tg: TaskGroup, log: BoundLogger) -> str:
 @quickapi
 async def a_header_handler(content_type: Header = Header("none"), log=logger) -> str:
     return f"The header was: {content_type}"
+
+
+@app.get("/slow")
+@quickapi
+async def slow() -> str:
+    await sleep(5)
+    return "DONE!"
 
 
 if __name__ == "__main__":

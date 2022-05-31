@@ -216,7 +216,7 @@ def test_ctx_manager_dep(incanter: Incanter):
     """Context manager dependencies work."""
     entered, exited = False, False
 
-    @incanter.register_by_name
+    @incanter.register_by_name(is_ctx_manager="sync")
     @contextmanager
     def dep1():
         nonlocal entered, exited
@@ -243,7 +243,7 @@ def test_forced_ctx_manager_dep(incanter: Incanter):
     """Forced context manager dependencies work."""
     entered, exited = False, False
 
-    @incanter.register_by_name
+    @incanter.register_by_name(is_ctx_manager="sync")
     @contextmanager
     def dep1():
         nonlocal entered, exited
@@ -260,7 +260,7 @@ def test_forced_ctx_manager_dep(incanter: Incanter):
         assert entered
         return i + 1
 
-    assert incanter.prepare(fn, forced_deps=[dep1])(1) == 2
+    assert incanter.prepare(fn, forced_deps=[(dep1, "sync")])(1) == 2
 
     assert entered
     assert exited

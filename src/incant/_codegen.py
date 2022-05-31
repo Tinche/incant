@@ -1,30 +1,9 @@
 import linecache
 
-from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from inspect import (
-    Signature,
-    isasyncgenfunction,
-    iscoroutinefunction,
-    isgeneratorfunction,
-    signature,
-)
-from typing import Any, Callable, List, Union
+from inspect import Signature, iscoroutinefunction, signature
+from typing import Any, Callable, List, Literal, Optional, Union
 
 from attr import define
-
-
-def is_async_context_manager(fn: Any) -> bool:
-    return (
-        fn.__class__ is type and issubclass(fn, AbstractAsyncContextManager)
-    ) or bool(
-        (wrapped := getattr(fn, "__wrapped__", None)) and isasyncgenfunction(wrapped)
-    )
-
-
-def is_context_manager(fn: Any) -> bool:
-    return (fn.__class__ is type and issubclass(fn, AbstractContextManager)) or bool(
-        (wrapped := getattr(fn, "__wrapped__", None)) and isgeneratorfunction(wrapped)
-    )
 
 
 @define
@@ -34,11 +13,15 @@ class ParameterDep:
     default: Any = Signature.empty
 
 
+CtxManagerKind = Literal["sync", "async"]
+
+
 @define
 class LocalVarFactory:
     factory: Callable
     args: List[Union[Callable, ParameterDep]]
     is_forced: bool = False
+    is_ctx_manager: Optional[CtxManagerKind] = None
 
 
 def compile_invoke(
@@ -80,8 +63,11 @@ def compile_invoke(
 
     ret_type = ""
     if sig.return_annotation is not Signature.empty:
-        globs["_incant_return_type"] = sig.return_annotation
-        ret_type = " -> _incant_return_type"
+        tn = sig.return_annotation.__name__
+        if tn in globs and globs[tn] is not sig.return_annotation:
+            tn = "_incant_return_type"
+        globs[tn] = sig.return_annotation
+        ret_type = f" -> {tn}"
     if is_async:
         lines.append(f"async def {fn_name}({', '.join(arg_lines)}){ret_type}:")
     else:
@@ -113,10 +99,8 @@ def compile_invoke(
 
         local_name = f"_incant_local_{local_counter}"
 
-        if is_async_context_manager(local_var.factory) or is_context_manager(
-            local_var.factory
-        ):
-            aw = "async " if is_async_context_manager(local_var.factory) else ""
+        if local_var.is_ctx_manager is not None:
+            aw = "async " if local_var.is_ctx_manager == "async" else ""
             if not local_var.is_forced:
                 lines.append(
                     f"  {' ' * ind}{aw}with {local_var_factory_name}({', '.join(local_arg_lines)}) as {local_name}:"

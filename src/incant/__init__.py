@@ -18,11 +18,11 @@ from typing import (
 from attr import Factory, define, field, frozen
 
 from ._codegen import (
+    CtxManagerKind,
     LocalVarFactory,
     ParameterDep,
     compile_incant_wrapper,
     compile_invoke,
-    is_async_context_manager,
 )
 from ._compat import NO_OVERRIDE, Override, get_annotated_override
 
@@ -39,6 +39,8 @@ R = TypeVar("R")
 class FactoryDep:
     factory: Callable  # The fn to call.
     arg_name: str  # The name of the param this is fulfulling.
+    # Is the result of the factory a ctx manager?
+    is_ctx_manager: Optional[CtxManagerKind] = None
 
 
 Dep = Union[FactoryDep, ParameterDep]
@@ -57,18 +59,18 @@ def is_subclass(type, superclass) -> bool:
 @frozen
 class Hook:
     predicate: PredicateFn
-    factory: Optional[Callable[[Parameter], Callable]]
+    factory: Optional[Tuple[Callable[[Parameter], Callable], Optional[CtxManagerKind]]]
 
     @classmethod
     def for_name(cls, name: str, hook: Optional[Callable]):
-        return cls(lambda p: p.name == name, None if hook is None else (lambda _: hook))  # type: ignore
+        return cls(lambda p: p.name == name, None if hook is None else (lambda _: hook, None))  # type: ignore
 
     @classmethod
     def for_type(cls, type: Any, hook: Optional[Callable]):
         """Register by exact type (subclasses won't match)."""
         return cls(
             lambda p: p.annotation == type,
-            None if hook is None else lambda _: hook,  # type: ignore
+            None if hook is None else (lambda _: hook, None),  # type: ignore
         )
 
 
@@ -93,13 +95,18 @@ class Incanter:
         fn: Callable[..., R],
         hooks: Sequence[Hook] = (),
         is_async: Optional[bool] = None,
-        forced_deps: Sequence[Callable] = (),
+        forced_deps: Sequence[Union[Callable, Tuple[Callable, CtxManagerKind]]] = (),
     ) -> Callable[..., R]:
         """Prepare a new function, encapsulating satisfied dependencies.
 
         forced_deps: A sequence of dependencies that will be called even if `fn` doesn't require them explicitly.
         """
-        return self._invoke_cache(fn, tuple(hooks), is_async, tuple(forced_deps))
+        return self._invoke_cache(
+            fn,
+            tuple(hooks),
+            is_async,
+            tuple(f if isinstance(f, tuple) else (f, None) for f in forced_deps),
+        )
 
     def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
         return self.prepare(fn, is_async=False)(*args, **kwargs)
@@ -116,7 +123,11 @@ class Incanter:
         return await self._incant(fn, args, kwargs, is_async=True)
 
     def register_by_name(
-        self, fn: Optional[Callable] = None, *, name: Optional[str] = None
+        self,
+        fn: Optional[Callable] = None,
+        *,
+        name: Optional[str] = None,
+        is_ctx_manager: Optional[CtxManagerKind] = None,
     ):
         """
         Register a factory to be injected by name. Can also be used as a decorator.
@@ -125,14 +136,21 @@ class Incanter:
         """
         if fn is None:
             # Decorator
-            return lambda fn: self.register_by_name(fn, name=name)
+            return lambda fn: self.register_by_name(
+                fn, name=name, is_ctx_manager=is_ctx_manager
+            )
 
         if name is None:
             name = fn.__name__
-        self.register_hook(lambda p: p.name == name, fn)
+        self.register_hook(lambda p: p.name == name, fn, is_ctx_manager=is_ctx_manager)
         return fn
 
-    def register_by_type(self, fn: Union[Callable, Type], type: Optional[Type] = None):
+    def register_by_type(
+        self,
+        fn: Union[Callable, Type],
+        type: Optional[Type] = None,
+        is_ctx_manager: Optional[CtxManagerKind] = None,
+    ):
         """
         Register a factory to be injected by type. Can also be used as a decorator.
 
@@ -149,16 +167,28 @@ class Incanter:
                     raise Exception("No return type found, provide a type.")
         else:
             type_to_reg = type
-        self.register_hook(lambda p: is_subclass(p.annotation, type_to_reg), fn)
+        self.register_hook(
+            lambda p: is_subclass(p.annotation, type_to_reg), fn, is_ctx_manager
+        )
         return fn
 
-    def register_hook(self, predicate: PredicateFn, factory: Callable) -> None:
-        self.register_hook_factory(predicate, lambda _: factory)
+    def register_hook(
+        self,
+        predicate: PredicateFn,
+        factory: Callable,
+        is_ctx_manager: Optional[CtxManagerKind] = None,
+    ) -> None:
+        self.register_hook_factory(predicate, lambda _: factory, is_ctx_manager)
 
     def register_hook_factory(
-        self, predicate: PredicateFn, hook_factory: Callable[[Parameter], Callable]
+        self,
+        predicate: PredicateFn,
+        hook_factory: Callable[[Parameter], Callable],
+        is_ctx_manager: Optional[CtxManagerKind] = None,
     ) -> None:
-        self.hook_factory_registry.insert(0, Hook(predicate, hook_factory))
+        self.hook_factory_registry.insert(
+            0, Hook(predicate, (hook_factory, is_ctx_manager))
+        )
         self._invoke_cache.cache_clear()  # type: ignore
         self._incant_cache.cache_clear()  # type: ignore
 
@@ -225,22 +255,22 @@ class Incanter:
         self,
         fn: Callable,
         additional_hooks: Sequence[Hook],
-        forced_deps: Sequence[Callable] = (),
-    ) -> List[Tuple[Callable, List[Dep]]]:
+        forced_deps: Sequence[Tuple[Callable, Optional[CtxManagerKind]]] = (),
+    ) -> List[Tuple[Callable, Optional[CtxManagerKind], List[Dep]]]:
         """Generate the dependency tree for `fn`.
 
         The dependency tree is a list of factories and their dependencies.
 
         The actual function is the last item.
         """
-        to_process = [fn, *forced_deps]
-        final_nodes: List[Tuple[Callable, List[Dep]]] = []
+        to_process = [(fn, None), *forced_deps]
+        final_nodes: List[Tuple[Callable, Optional[CtxManagerKind], List[Dep]]] = []
         hooks = list(additional_hooks) + self.hook_factory_registry
         already_processed_hooks = set()
         while to_process:
             _nodes = to_process
             to_process = []
-            for node in _nodes:
+            for node, ctx_mgr_kind in _nodes:
                 sig = _signature(node)
                 dependents: List[Union[ParameterDep, FactoryDep]] = []
                 for name, param in sig.parameters.items():
@@ -260,16 +290,18 @@ class Incanter:
                                     ParameterDep(name, param_type, param.default)
                                 )
                             else:
-                                factory = hook.factory(param)
+                                factory = hook.factory[0](param)
                                 if factory not in already_processed_hooks:
-                                    to_process.append(factory)
+                                    to_process.append((factory, hook.factory[1]))
                                     already_processed_hooks.add(factory)
-                                dependents.append(FactoryDep(factory, name))
+                                dependents.append(
+                                    FactoryDep(factory, name, hook.factory[1])
+                                )
 
                             break
                     else:
                         dependents.append(ParameterDep(name, param_type, param.default))
-                final_nodes.insert(0, (node, dependents))
+                final_nodes.insert(0, (node, ctx_mgr_kind, dependents))
         return final_nodes
 
     def _gen_invoke(
@@ -277,7 +309,7 @@ class Incanter:
         fn: Callable,
         hooks: Tuple[Hook, ...] = (),
         is_async: Optional[bool] = False,
-        forced_deps: Tuple[Callable, ...] = (),
+        forced_deps: Tuple[Tuple[Callable, CtxManagerKind], ...] = (),
     ):
         dep_tree = self._gen_dep_tree(fn, hooks, forced_deps)
 
@@ -286,14 +318,14 @@ class Incanter:
         # is_async = None means autodetect
         if is_async is None:
             is_async = any(
-                iscoroutinefunction(factory) or is_async_context_manager(factory)
-                for factory, _ in dep_tree
+                iscoroutinefunction(factory) or ctx_mgr_kind == "async"
+                for factory, ctx_mgr_kind, _ in dep_tree
             )
 
         # All non-parameter deps become local vars.
-        for ix, (factory, deps) in enumerate(dep_tree[:-1]):
+        for ix, (factory, ctx_mgr_kind, deps) in enumerate(dep_tree[:-1]):
             if not is_async and (
-                iscoroutinefunction(factory) or is_async_context_manager(factory)
+                iscoroutinefunction(factory) or ctx_mgr_kind == "async"
             ):
                 raise TypeError(
                     f"The function would be a coroutine because of {factory}, use `ainvoke` instead"
@@ -302,7 +334,7 @@ class Incanter:
             # It's possible this is a forced dependency, and nothing downstream actually needs it.
             # In that case, we mark it as forced so it doesn't get its own local var in the generated function.
             is_needed = False
-            for _, downstream_deps in dep_tree[ix + 1 :]:
+            for _, _, downstream_deps in dep_tree[ix + 1 :]:
                 if any(
                     isinstance(d, FactoryDep) and d.factory == factory
                     for d in downstream_deps
@@ -318,11 +350,12 @@ class Incanter:
                         for dep in deps
                     ],
                     not is_needed,
+                    ctx_mgr_kind,
                 )
             )
 
         outer_args = [
-            dep for node in dep_tree for dep in node[1] if isinstance(dep, ParameterDep)
+            dep for node in dep_tree for dep in node[2] if isinstance(dep, ParameterDep)
         ]
         # We need to do a pass over the outer args to consolidate duplicates.
         per_outer_arg: dict[str, List[ParameterDep]] = {}
@@ -354,7 +387,7 @@ class Incanter:
         outer_args.sort(key=lambda a: a.default is not Signature.empty)
 
         fn_factory_args = []
-        for dep in dep_tree[-1][1]:
+        for dep in dep_tree[-1][2]:
             if isinstance(dep, FactoryDep):
                 fn_factory_args.append(dep.arg_name)
 

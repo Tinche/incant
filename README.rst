@@ -23,15 +23,15 @@ Going by the old, humorous adage that dependency injection is simply passing arg
 * matching dependencies by anything in ``inspect.Parameter``, including the parameter name, type annotation and default value
 * convenient APIs for matching by parameter name and type annotation
 * sync and async functions and dependencies
-* async context manager dependencies
+* sync and async context manager dependencies
 * no global state
+* attaching arbitrary external dependencies to functions (``forced dependencies``), commonly used for side-effects
 
 `incant` has a very lean API surface, the core API being:
 
 * a single class, ``incant.Incanter``, for keeping state (dependency rules)
 * a method for registering dependencies: ``Incanter.register_hook()``, and a number of higher level, more user-friendly aliases
 * methods for invoking arbitrary functions while injecting dependencies: ``Incanter.invoke()`` and its async variant, ``Incanter.ainvoke()``
-* a method for getting the parameters of an arbitrary function after injecting dependencies: ``Incanter.parameters()``
 * methods for invoking arbitrary functions while picking and forwarding any required arguments: ``Incanter.incant`` and its async variant, ``Incanter.aincant``
 
 `incant` is able to leverage runtime type annotations, but is also capable of functioning without them.
@@ -58,7 +58,7 @@ Tutorial
 This section contains a long, narrative-style guide to `incant`.
 There is a *Usage* section below with a more focused description of the library API.
 
-Let's demonstrate the use of `incant` with a hypothetical scenario.
+Let's demonstrate the use of `incant` with a number of hypothetical scenarios.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
 You don't have to do it from scratch though, so you choose (essentially at random) an existing framework: Quart (Quart is an async version of Flask).
 Pretty much any other framework (sync or async) would have also worked; other implementations are left as an exercise to the reader.
@@ -67,6 +67,10 @@ You decide to call this framework `QuickAPI`.
 Simple Quart handlers are very easy to write, so your colleagues are quick to get started:
 
 .. code-block:: python
+
+    from quart import App
+
+    app = App(__name__)
 
     @app.get("/")
     async def index():
@@ -110,9 +114,9 @@ You decide to write a function to get the address from the request, and to regis
 This means any function invoked through the `Incanter` will have any parameters annotated as ``IPv4Address`` satisfied by calling the ``get_ip_address`` dependency factory.
 
 You contemplate how to get this information to the ``ip_address_handler``, and choose to write a simple decorator (yay Python!).
-Your colleague agrees, but (citing consistency) wants the decorator to be applied to all handlers.
+Your colleague agrees, but (citing consistency) wants the decorator to be applied to all handlers going forward.
 
-(You could solve this more elegantly by subclassing the ``quart.Quart`` class, but forgo this as this is an `incant` tutorial, not a Quart one.)
+(You could solve this more elegantly by subclassing the ``quart.Quart`` class but forgo this as this is an `incant` tutorial, not a Quart one.)
 
 You rub your hands and mutter "Let's roll" to yourself.
 
@@ -172,7 +176,7 @@ The Magic of ``incant``
 
 Some time later, another colleague approaches you asking for a logger to be provided to their handler.
 They want to use structured logging, and they want the logger to already be bound with the name of the handler.
-You think the proposal is well thought-out, and want to use the logger yourself to log every request.
+You think the proposal is well-thought-out and want to use the logger yourself to log every request.
 
 Here's what they want their handler to look like:
 
@@ -219,7 +223,7 @@ However, the ``logging_handler`` handler requires it. Without changes, invoking 
 
 You change the ``quickapi`` decorator to use ``Incanter.aincant`` (the async version of ``Incanter.incant``) and always pass in the logger instance.
 ``incant`` is meant for cases like this, forwarding the parameters if they are needed and skipping them otherwise.
-Since ``incant`` doesn't itself call ``invoke``, you prepare it yourself before hand.
+Since ``incant`` doesn't itself call ``invoke``, you prepare it yourself beforehand.
 
 .. code-block:: python
 
@@ -310,7 +314,49 @@ You don't feel particularly challenged, as ``incant`` support async context mana
 
 .. code-block:: python
 
-    incanter.register_by_type(TaskGroup)
+    incanter.register_by_type(TaskGroup, is_context_manager="async")
+
+Forced Dependencies
+~~~~~~~~~~~~~~~~~~~
+
+Yesterday you've had an outage due to being featured by an influencer on a popular social media site!
+You decide to start working on making your services more robust.
+Your plan is to apply a limit to how long your service will process each request.
+The timeout should default to one second, or it can be provided from the calling service via a header.
+
+You decide to again use the `quattro` library; it has a useful ``fail_after`` context manager that should do the trick.
+
+Since `incant` supports context managers as dependencies, your path is clear:
+
+.. code-block:: python
+
+    from quattro import fail_after
+
+    def apply_timeout(timeout: Header = Header("1.0")) -> ContextManager[CancelScope]:
+        return fail_after(float(timeout))
+
+However, our usual approach would require refactoring all our handlers to require this dependency.
+Instead, we will make this a *forced dependency*, which means ``incant`` will run it for all handlers.
+Since no handler needs the return value of any forced dependency (since they are unaware of them), they are mostly used for side-effects.
+We change the ``quickapi`` decorator thusly:
+
+.. code-block:: python
+
+    def quickapi(handler):
+        log = logger.bind(handler=handler.__name__)
+
+        prepared = incanter.prepare(handler, forced_deps=[(apply_timeout, "sync")])
+
+        @wraps(handler)
+        async def wrapper(**kwargs):
+            log.info("Processing")
+            return await incanter.aincant(prepared, log=log, **kwargs)
+
+        return wrapper
+
+.. NOTE::
+    Since it's not possible to accurately autodetect whether a forced dependency is or isn't a context manager,
+    if it *is* a context manager you have to be explicit about it and supply a tuple like in the example.
 
 Complex Rules
 ~~~~~~~~~~~~~
@@ -514,6 +560,7 @@ Changelog
 ---------
 0.4.0 (UNRELEASED)
 ~~~~~~~~~~~~~~~~~~
+* *Breaking change*: due to limitations in autodetecting context managers (both sync and async), context manager dependencies must be explicitly registered by passing ``is_context_manager="sync"`` (or ``async``) to the registration functions.
 * Injection can be customized on a per-parameter basis by annotating a parameter with ``Annotated[type, incant.Override(...)]``.
 * Implement support for forced dependencies.
 * Sync context managers may now be dependencies.
