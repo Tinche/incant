@@ -212,7 +212,7 @@ class Incanter:
         return wrapper(*args, **kwargs)
 
     def _gen_incant_plan(
-        self, fn, pos_args_types: Tuple, kwargs: Set[Tuple[str, Any]], is_async=False
+        self, fn, pos_args_types: Tuple, kwargs: Set[Tuple[str, Any]]
     ) -> List[Union[int, str]]:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
         pos_arg_plan: List[Union[int, str]] = []
@@ -232,6 +232,9 @@ class Incanter:
                 pos_arg_plan.append(pos_args_by_type[arg.annotation])
             elif arg_name in kwarg_names:
                 pos_arg_plan.append(arg_name)
+            elif arg.default is not Signature.empty:
+                # An argument with a default we cannot fulfil is ok.
+                continue
             else:
                 raise TypeError(f"Cannot fulfil argument {arg_name}")
         return pos_arg_plan
@@ -243,9 +246,7 @@ class Incanter:
         kwargs_by_name_and_type: Set,
         is_async: Optional[bool] = False,
     ) -> Callable:
-        plan = self._gen_incant_plan(
-            fn, pos_args_types, kwargs_by_name_and_type, is_async=is_async
-        )
+        plan = self._gen_incant_plan(fn, pos_args_types, kwargs_by_name_and_type)
         incant = compile_incant_wrapper(
             fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
         )

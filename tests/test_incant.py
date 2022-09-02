@@ -47,3 +47,12 @@ def test_missing_args(incanter: Incanter):
 
     with pytest.raises(TypeError):
         incanter.incant(func)
+
+
+def test_args_with_defaults(incanter: Incanter):
+    def func(x: int = 1) -> int:
+        return x + 1
+
+    assert incanter.incant(func) == 2
+
+    assert incanter.incant(func, 2) == 3

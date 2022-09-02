@@ -558,12 +558,14 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
-0.4.0 (UNRELEASED)
-~~~~~~~~~~~~~~~~~~
+22.1.0 (2022-09-02)
+~~~~~~~~~~~~~~~~~~~
 * *Breaking change*: due to limitations in autodetecting context managers (both sync and async), context manager dependencies must be explicitly registered by passing ``is_context_manager="sync"`` (or ``async``) to the registration functions.
 * Injection can be customized on a per-parameter basis by annotating a parameter with ``Annotated[type, incant.Override(...)]``.
 * Implement support for forced dependencies.
 * Sync context managers may now be dependencies.
+* ``incanter.a/incant()`` now handles unfulfilled parameters with defaults properly.
+* Switched to CalVer.
 
 0.3.0 (2022-02-03)
 ~~~~~~~~~~~~~~~~~~
