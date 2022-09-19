@@ -558,6 +558,10 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
+22.2.0 (UNRELEASED)
+~~~~~~~~~~~~~~~~~~~
+* Python 3.11 support.
+
 22.1.0 (2022-09-02)
 ~~~~~~~~~~~~~~~~~~~
 * *Breaking change*: due to limitations in autodetecting context managers (both sync and async), context manager dependencies must be explicitly registered by passing ``is_context_manager="sync"`` (or ``async``) to the registration functions.
