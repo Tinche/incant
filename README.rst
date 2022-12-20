@@ -10,6 +10,10 @@ incant🪄: a little magic for your functions
 .. image:: https://codecov.io/gh/Tinche/incant/branch/main/graph/badge.svg?token=9IE6FHZV2K
        :target: https://codecov.io/gh/Tinche/incant
 
+.. image:: https://img.shields.io/pypi/pyversions/incant.svg
+        :target: https://github.com/Tinche/incant
+        :alt: Supported Python versions
+
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 
