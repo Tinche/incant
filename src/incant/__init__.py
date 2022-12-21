@@ -19,7 +19,7 @@ from attr import Factory, define, field, frozen
 
 from ._codegen import (
     CtxManagerKind,
-    LocalVarFactory,
+    Invocation,
     ParameterDep,
     compile_incant_wrapper,
     compile_invoke,
@@ -303,7 +303,12 @@ class Incanter:
                     else:
                         dependents.append(ParameterDep(name, param_type, param.default))
                 final_nodes.insert(0, (node, ctx_mgr_kind, dependents))
-        return final_nodes
+
+        # We need to sort the nodes to ensure no unbound local vars.
+        dep_nodes = final_nodes[:-1]
+        dep_nodes.sort(key=lambda n: len(n[2]))
+        dep_nodes.append(final_nodes[-1])
+        return dep_nodes
 
     def _gen_invoke(
         self,
@@ -314,8 +319,6 @@ class Incanter:
     ):
         dep_tree = self._gen_dep_tree(fn, hooks, forced_deps)
 
-        local_vars: List[LocalVarFactory] = []
-
         # is_async = None means autodetect
         if is_async is None:
             is_async = any(
@@ -323,7 +326,8 @@ class Incanter:
                 for factory, ctx_mgr_kind, _ in dep_tree
             )
 
-        # All non-parameter deps become local vars.
+        invocs: List[Invocation] = []
+        # All non-parameter deps become invocations.
         for ix, (factory, ctx_mgr_kind, deps) in enumerate(dep_tree[:-1]):
             if not is_async and (
                 iscoroutinefunction(factory) or ctx_mgr_kind == "async"
@@ -343,8 +347,8 @@ class Incanter:
                     is_needed = True
                     break
 
-            local_vars.append(
-                LocalVarFactory(
+            invocs.append(
+                Invocation(
                     factory,
                     [
                         dep.factory if isinstance(dep, FactoryDep) else dep
@@ -388,12 +392,19 @@ class Incanter:
         outer_args.sort(key=lambda a: a.default is not Signature.empty)
 
         fn_factory_args = []
+        fn_factories = []
         for dep in dep_tree[-1][2]:
             if isinstance(dep, FactoryDep):
                 fn_factory_args.append(dep.arg_name)
+                fn_factories.append(dep.factory)
 
         return compile_invoke(
-            fn, fn_factory_args, outer_args, local_vars, is_async=is_async
+            fn,
+            fn_factories,
+            fn_factory_args,
+            outer_args,
+            invocs,
+            is_async=is_async,
         )
 
 
