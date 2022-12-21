@@ -264,3 +264,18 @@ def test_forced_ctx_manager_dep(incanter: Incanter):
 
     assert entered
     assert exited
+
+
+def test_ordering(incanter: Incanter) -> None:
+    @incanter.register_by_name
+    def x() -> int:
+        return 1
+
+    @incanter.register_by_name
+    def y(x: int) -> int:
+        return x + 1
+
+    def func(x: int, y: int) -> None:
+        return x + y
+
+    assert incanter.invoke(func) == 3
