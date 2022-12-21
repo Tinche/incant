@@ -399,7 +399,8 @@ class Incanter:
                 fn_factories.append(dep.factory)
 
         return compile_invoke(
-            Invocation(fn, fn_factories),
+            fn,
+            fn_factories,
             fn_factory_args,
             outer_args,
             invocs,
