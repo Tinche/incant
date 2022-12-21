@@ -50,7 +50,7 @@ def test_greeter_factory(incanter: Incanter):
     assert incanter.invoke(greet_a_customer) == "Hello !!"
 
 
-def test_greeter_settings():
+def test_greeter_settings() -> None:
     """Test the wired scenario from https://wired.readthedocs.io/en/latest/tutorial/settings/index.html"""
 
     @define

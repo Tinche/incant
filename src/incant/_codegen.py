@@ -27,7 +27,8 @@ class Invocation:
 
 
 def compile_invoke(
-    fn_invocation: Invocation,
+    fn: Callable,
+    fn_args: List[Callable],
     fn_factory_args: List[str],
     outer_args: List[ParameterDep],
     invocations: List[Invocation],
@@ -40,10 +41,9 @@ def compile_invoke(
     """
     # Some arguments need to be taken from outside.
     # Some arguments need to be calculated from factories.
-    fn = fn_invocation.factory
     sig = signature(fn)
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
-    globs = {}
+    globs: Dict[str, Any] = {}
     taken_local_vars = set()
     arg_lines = []
 
@@ -97,7 +97,7 @@ def compile_invoke(
     # An invocation is inlineable if:
     # * it is not a context manager
     # * it appears only once in the args attribute of the invocation chain.
-    factory_fns = Counter[Callable](fn_invocation.args)
+    factory_fns = Counter(fn_args)
     for invoc in invocations:
         if invoc.is_ctx_manager:
             continue
@@ -172,7 +172,7 @@ def compile_invoke(
             incant_arg_lines.append(name)
         else:
             # We need to fish out the local name for this fn arg.
-            factory = fn_invocation.args[cnt]
+            factory = fn_args[cnt]
             if factory in inline_exprs_by_factory:
                 incant_arg_lines.append(inline_exprs_by_factory[factory])
             else:

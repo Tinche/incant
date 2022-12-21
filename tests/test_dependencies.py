@@ -275,7 +275,7 @@ def test_ordering(incanter: Incanter) -> None:
     def y(x: int) -> int:
         return x + 1
 
-    def func(x: int, y: int) -> None:
+    def func(x: int, y: int) -> int:
         return x + y
 
     assert incanter.invoke(func) == 3
