@@ -568,6 +568,7 @@ Changelog
 * Fix ``unbound local error`` while generating code.
   (`#4 <https://github.com/Tinche/incant/issues/4>`_)
 * Avoid using local variables in generated code when possible.
+* When ``incant.prepare`` cannot do anything for a function, return the original function for efficiency.
 
 22.1.0 (2022-09-02)
 ~~~~~~~~~~~~~~~~~~~

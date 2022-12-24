@@ -318,6 +318,9 @@ class Incanter:
         forced_deps: Tuple[Tuple[Callable, CtxManagerKind], ...] = (),
     ):
         dep_tree = self._gen_dep_tree(fn, hooks, forced_deps)
+        if len(dep_tree) == 1:
+            # Nothing we can do for this function.
+            return fn
 
         # is_async = None means autodetect
         if is_async is None:
