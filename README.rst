@@ -565,6 +565,9 @@ Changelog
 22.2.0 (UNRELEASED)
 ~~~~~~~~~~~~~~~~~~~
 * Python 3.11 support.
+* Fix ``unbound local error`` while generating code.
+  (`#4 <https://github.com/Tinche/incant/issues/4>`_)
+* Avoid using local variables in generated code when possible.
 
 22.1.0 (2022-09-02)
 ~~~~~~~~~~~~~~~~~~~
