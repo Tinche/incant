@@ -562,7 +562,7 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
-22.2.0 (UNRELEASED)
+22.2.0 (2022-12-26)
 ~~~~~~~~~~~~~~~~~~~
 * Python 3.11 support.
 * Fix ``unbound local error`` while generating code.
