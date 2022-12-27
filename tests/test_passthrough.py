@@ -45,3 +45,14 @@ def test_async_mismatch(incanter: Incanter) -> None:
     assert incanter.prepare(func, is_async=True) is not func
 
     # The other way (adapting an async function into a sync one) is not possible.
+
+
+def test_explicit_sync(incanter: Incanter) -> None:
+    """
+    Original function should be returned if sync is explicit.
+    """
+
+    def func(x: int) -> int:
+        return x + 1
+
+    assert incanter.prepare(func, is_async=False) is func

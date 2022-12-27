@@ -319,7 +319,7 @@ class Incanter:
     ):
         dep_tree = self._gen_dep_tree(fn, hooks, forced_deps)
         if len(dep_tree) == 1 and (
-            is_async is None or (is_async and iscoroutinefunction(fn))
+            is_async is None or (is_async is iscoroutinefunction(fn))
         ):
             # Nothing we can do for this function.
             return fn
