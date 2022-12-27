@@ -562,6 +562,10 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
+22.2.2 (UNRELEASED)
+~~~~~~~~~~~~~~~~~~~
+* Fix an optimization for explicitly sync functions.
+
 22.2.1 (2022-12-27)
 ~~~~~~~~~~~~~~~~~~~
 * Fix an issue when wrapping a sync function with an async one.
