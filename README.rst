@@ -562,6 +562,10 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 
 Changelog
 ---------
+22.2.1 (UNRELEASED)
+~~~~~~~~~~~~~~~~~~~
+* Fix an issue when wrapping a sync function with an async one.
+
 22.2.0 (2022-12-26)
 ~~~~~~~~~~~~~~~~~~~
 * Python 3.11 support.
