@@ -209,11 +209,8 @@ def compile_incant_wrapper(
     fn_name = f"incant_{fn.__name__}" if fn.__name__ != "<lambda>" else "incant_lambda"
     globs = {"_incant_inner_fn": fn}
     arg_lines = []
-    if incant_plan:
-        if num_pos_args:
-            arg_lines.append("*args")
-        else:
-            arg_lines.append("*")
+    if num_pos_args:
+        arg_lines.append("*args")
 
     kwargs = [arg for arg in incant_plan if isinstance(arg, str)]
     arg_lines.extend(kwargs)

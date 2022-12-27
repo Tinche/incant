@@ -565,6 +565,7 @@ Changelog
 22.2.2 (UNRELEASED)
 ~~~~~~~~~~~~~~~~~~~
 * Fix an optimization for explicitly sync functions.
+* Fix an issue incanting unnecessary positional arguments.
 
 22.2.1 (2022-12-27)
 ~~~~~~~~~~~~~~~~~~~

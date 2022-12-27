@@ -16,7 +16,7 @@ def test_no_args_extra_args(incanter: Incanter):
     def func():
         return 1
 
-    assert incanter.incant(func, a=1, b=2)
+    assert incanter.incant(func, 3, a=1, b=2)
 
 
 def test_simple_args(incanter: Incanter):
