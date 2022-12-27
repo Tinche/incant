@@ -56,3 +56,27 @@ def test_args_with_defaults(incanter: Incanter):
     assert incanter.incant(func) == 2
 
     assert incanter.incant(func, 2) == 3
+
+
+def test_pos_args_subclasses(incanter: Incanter) -> None:
+    """Invoking should handle subclasses of positional args properly."""
+
+    class SubInt(int):
+        pass
+
+    def func(x: int) -> int:
+        return x + 1
+
+    assert incanter.incant(func, SubInt(2)) == 3
+
+
+def test_kwargs_subclasses(incanter: Incanter) -> None:
+    """Invoking should handle subclasses of kwargs properly."""
+
+    class SubInt(int):
+        pass
+
+    def func(x: int) -> int:
+        return x + 1
+
+    assert incanter.incant(func, x=SubInt(2)) == 3

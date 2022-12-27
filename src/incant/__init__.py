@@ -50,6 +50,7 @@ PredicateFn = Callable[[Parameter], bool]
 
 
 def is_subclass(type, superclass) -> bool:
+    """A safe version of `issubclass`."""
     try:
         return issubclass(type, superclass)
     except Exception:
@@ -212,25 +213,33 @@ class Incanter:
         return wrapper(*args, **kwargs)
 
     def _gen_incant_plan(
-        self, fn, pos_args_types: Tuple, kwargs: Set[Tuple[str, Any]]
+        self, fn, pos_args_types: Tuple[Any, ...], kwargs: Set[Tuple[str, Any]]
     ) -> List[Union[int, str]]:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
         pos_arg_plan: List[Union[int, str]] = []
-        pos_args_by_type = {a: ix for ix, a in enumerate(pos_args_types)}
         kwarg_names = {kw[0] for kw in kwargs}
         sig = signature(fn)
         for arg_name, arg in sig.parameters.items():
+            found = False
             if (
                 arg.annotation is not Signature.empty
                 and (arg_name, arg.annotation) in kwargs
             ):
                 pos_arg_plan.append(arg_name)
-            elif (
-                arg.annotation is not Signature.empty
-                and arg.annotation in pos_args_by_type
-            ):
-                pos_arg_plan.append(pos_args_by_type[arg.annotation])
-            elif arg_name in kwarg_names:
+                found = True
+            if found:
+                continue
+
+            elif arg.annotation is not Signature.empty:
+                for ix, a in enumerate(pos_args_types):
+                    if is_subclass(a, arg.annotation):
+                        pos_arg_plan.append(ix)
+                        found = True
+                        break
+            if found:
+                continue
+
+            if arg_name in kwarg_names:
                 pos_arg_plan.append(arg_name)
             elif arg.default is not Signature.empty:
                 # An argument with a default we cannot fulfil is ok.
