@@ -43,7 +43,7 @@ def compile_invoke(
     """
     # Some arguments need to be taken from outside.
     # Some arguments need to be calculated from factories.
-    sig = signature(fn, eval_str=True)
+    sig = signature(fn)
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
     globs: Dict[str, Any] = {}
     taken_local_vars = set()
