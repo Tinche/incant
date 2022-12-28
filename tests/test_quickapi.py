@@ -6,7 +6,7 @@ from time import perf_counter
 import pytest
 
 from httpx import AsyncClient
-from uvicorn import Config, Server  # type: ignore
+from uvicorn import Config, Server
 
 from .quickapi import app
 

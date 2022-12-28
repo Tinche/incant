@@ -27,7 +27,7 @@ dev = [
     "quattro",
     "rich",
     "structlog",
-    "uvicorn",
+    "uvicorn==0.20.0",
 ]
 
 [project.urls]
