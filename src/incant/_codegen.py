@@ -1,9 +1,11 @@
 import linecache
 
-from inspect import Signature, iscoroutinefunction, signature
+from inspect import Signature, iscoroutinefunction
 from typing import Any, Callable, Counter, Dict, List, Literal, Optional, Union
 
 from attr import define
+
+from ._compat import signature
 
 
 @define
@@ -236,7 +238,7 @@ def compile_incant_wrapper(
     return fn
 
 
-def _generate_unique_filename(func_name: str, func_type: str, source: List[str]):
+def _generate_unique_filename(func_name: str, func_type: str, source: List[str]) -> str:
     """
     Create a "filename" suitable for a function being generated.
     """
@@ -249,7 +251,7 @@ def _generate_unique_filename(func_name: str, func_type: str, source: List[str])
         # the linecache with a dummy line.  The caller can then
         # set this value correctly.
         cache_line = (len(source), None, source, unique_filename)
-        if linecache.cache.setdefault(unique_filename, cache_line) == cache_line:  # type: ignore
+        if linecache.cache.setdefault(unique_filename, cache_line) == cache_line:
             return unique_filename
 
         # Looks like this spot is taken. Try again.

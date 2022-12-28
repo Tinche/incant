@@ -20,7 +20,7 @@ dev = [
     "flake8",
     "httpx",
     "isort",
-    "mypy",
+    "mypy==0.991",
     "pytest-asyncio",
     "pytest",
     "quart",
@@ -38,3 +38,7 @@ profile = "attrs"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.mypy]
+warn_unused_ignores = true
+warn_redundant_casts = true

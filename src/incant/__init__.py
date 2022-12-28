@@ -1,5 +1,5 @@
 from functools import lru_cache
-from inspect import Parameter, Signature, iscoroutinefunction, signature
+from inspect import Parameter, Signature, iscoroutinefunction
 from typing import (
     Any,
     Awaitable,
@@ -24,7 +24,7 @@ from ._codegen import (
     compile_incant_wrapper,
     compile_invoke,
 )
-from ._compat import NO_OVERRIDE, Override, get_annotated_override
+from ._compat import NO_OVERRIDE, Override, get_annotated_override, signature
 
 
 __all__ = ["NO_OVERRIDE", "Override", "Hook", "Incanter"]

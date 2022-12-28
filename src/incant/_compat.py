@@ -1,5 +1,8 @@
+import sys
+
+from functools import partial
 from inspect import Parameter
-from sys import version_info
+from inspect import signature as sig
 from typing import Any, Optional
 
 from attr import frozen
@@ -14,11 +17,18 @@ class Override:
     annotation: Any = NO_OVERRIDE
 
 
-if version_info >= (3, 9):
+if sys.version_info >= (3, 9):
     from typing import _AnnotatedAlias  # type: ignore
 
 else:
     from typing_extensions import _AnnotatedAlias
+
+if sys.version_info >= (3, 10):
+
+    signature = partial(sig, eval_str=True)
+
+else:
+    signature = sig
 
 
 def get_annotated_override(p: Parameter) -> Parameter:
