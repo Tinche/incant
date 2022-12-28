@@ -1,0 +1,43 @@
+"""Test support for __future__ annotations."""
+from __future__ import annotations
+
+from inspect import Parameter, signature
+
+import pytest
+
+from incant import Incanter
+
+
+def test_simple_prepare(incanter: Incanter):
+    def func(dep1) -> int:
+        return dep1 + 1
+
+    with pytest.raises(TypeError):
+        incanter.invoke(func)
+    assert signature(incanter.prepare(func)).parameters == {
+        "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
+    }
+
+    incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
+    assert incanter.invoke(func) == 3
+
+    assert signature(incanter.prepare(func)).parameters == {}
+    assert signature(incanter.prepare(func)).return_annotation is int
+
+
+def test_reg_by_type(incanter: Incanter):
+    @incanter.register_by_type
+    def dep(arg: float) -> str:
+        return str(arg + 1)
+
+    def fn(arg: str):
+        return "1.0" + arg
+
+    assert incanter.invoke(fn, 1.0) == "1.02.0"
+
+
+def test_incant_pos_args_by_type(incanter: Incanter):
+    def func(x: int) -> int:
+        return x + 1
+
+    assert incanter.incant(func, 5) == 6

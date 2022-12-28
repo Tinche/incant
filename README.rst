@@ -566,6 +566,7 @@ Changelog
 ~~~~~~~~~~~~~~~~~~~
 * Fix an optimization for explicitly sync functions.
 * Fix an issue incanting unnecessary positional arguments.
+* Support ``__future__`` annotations (PEP 563).
 
 22.2.1 (2022-12-27)
 ~~~~~~~~~~~~~~~~~~~

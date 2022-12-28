@@ -162,7 +162,7 @@ class Incanter:
             if isinstance(fn, _type):
                 type_to_reg = fn
             else:
-                sig = signature(fn)
+                sig = signature(fn, eval_str=True)
                 type_to_reg = sig.return_annotation
                 if type_to_reg is Signature.empty:
                     raise Exception("No return type found, provide a type.")
@@ -218,7 +218,7 @@ class Incanter:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
         pos_arg_plan: List[Union[int, str]] = []
         kwarg_names = {kw[0] for kw in kwargs}
-        sig = signature(fn)
+        sig = signature(fn, eval_str=True)
         for arg_name, arg in sig.parameters.items():
             found = False
             if (
@@ -434,6 +434,6 @@ def _reconcile_types(type_a, type_b):
 
 def _signature(f: Callable) -> Signature:
     """Return the signature of f, with potential overrides applied."""
-    sig = signature(f)
+    sig = signature(f, eval_str=True)
     parameters = [get_annotated_override(val) for val in sig.parameters.values()]
     return sig.replace(parameters=parameters)
