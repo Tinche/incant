@@ -39,6 +39,7 @@ def compile_invoke(
     """Generate the invocation wrapper for `fn`.
 
     :param fn_factory_args: Used names to avoid for local variables.
+    :param outer_args: Arguments that the generated function needs to retain.
 
     """
     # Some arguments need to be taken from outside.
@@ -155,7 +156,6 @@ def compile_invoke(
                     )
                 ind += 2
             else:
-
                 aw = "await " if iscoroutinefunction(invoc.factory) else ""
                 if not invoc.is_forced:
                     lines.append(

@@ -279,3 +279,27 @@ def test_ordering(incanter: Incanter) -> None:
         return x + y
 
     assert incanter.invoke(func) == 3
+
+
+def test_parameter_name_overwriting(incanter: Incanter) -> None:
+    """Use a hook to replace the parameter name."""
+
+    def func(an_int: int) -> int:
+        return an_int + 1
+
+    assert signature(incanter.prepare(func)).parameters == {
+        "an_int": Parameter("an_int", Parameter.POSITIONAL_OR_KEYWORD, annotation=int)
+    }
+
+    def diff_arg_name(another_int: int) -> int:
+        return another_int
+
+    incanter.register_by_type(diff_arg_name, int)
+
+    assert incanter.invoke(func, 1) == 2
+
+    assert signature(incanter.prepare(func)).parameters == {
+        "another_int": Parameter(
+            "another_int", Parameter.POSITIONAL_OR_KEYWORD, annotation=int
+        )
+    }

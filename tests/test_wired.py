@@ -205,6 +205,7 @@ def test_greeter_decoupled(incanter: Incanter):
 
 def test_greeter_datastore(incanter: Incanter):
     """Test the wired scenario from https://wired.readthedocs.io/en/latest/tutorial/datastore/index.html"""
+
     # The first part of the app:
     @define
     class Customer:

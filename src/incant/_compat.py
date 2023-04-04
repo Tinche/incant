@@ -24,7 +24,6 @@ else:
     from typing_extensions import _AnnotatedAlias
 
 if sys.version_info >= (3, 10):
-
     signature = partial(sig, eval_str=True)
 
 else:

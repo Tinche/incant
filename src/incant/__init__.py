@@ -301,12 +301,16 @@ class Incanter:
                                 )
                             else:
                                 factory = hook.factory[0](param)
-                                if factory not in already_processed_hooks:
-                                    to_process.append((factory, hook.factory[1]))
-                                    already_processed_hooks.add(factory)
-                                dependents.append(
-                                    FactoryDep(factory, name, hook.factory[1])
-                                )
+                                if factory == node:
+                                    # A hook cannot satisfy itself.
+                                    continue
+                                else:
+                                    if factory not in already_processed_hooks:
+                                        to_process.append((factory, hook.factory[1]))
+                                        already_processed_hooks.add(factory)
+                                    dependents.append(
+                                        FactoryDep(factory, name, hook.factory[1])
+                                    )
 
                             break
                     else:
