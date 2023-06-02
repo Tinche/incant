@@ -9,7 +9,7 @@ classifiers = ["License :: OSI Approved :: Apache Software License"]
 version = "23.1.0.dev0"
 requires-python = ">=3.8"
 description = "Magical function composition"
-readme = "README.rst"
+readme = "README.md"
 dependencies = ["typing_extensions; python_version == '3.8'"]
 
 [project.optional-dependencies]
