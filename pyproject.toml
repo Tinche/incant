@@ -11,8 +11,6 @@ requires-python = ">=3.8.1"
 description = "Magical function composition"
 readme = "README.md"
 dependencies = []
-
-
 license = {text = "Apache2"}
 
 [project.urls]
@@ -45,3 +43,7 @@ asyncio_mode = "auto"
 [tool.mypy]
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+[tool.coverage.run]
+parallel = true
+source_pkgs = ["incant"]
