@@ -2,7 +2,7 @@
 
 <a href="https://pypi.python.org/pypi/incant"><img src="https://img.shields.io/pypi/v/incant.svg"/></a>
 <a href="https://github.com/Tinche/incant/actions?workflow=CI"><img src="https://github.com/Tinche/incant/workflows/CI/badge.svg"/></a>
-<a href="https://codecov.io/gh/Tinche/incantI"><img src="https://codecov.io/gh/Tinche/incant/branch/main/graph/badge.svg?token=9IE6FHZV2K"/></a>
+<a href="https://github.com/Tinche/incant/actions/workflows/main.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Tinche/31981273f39dab936f0000563a30ce3f/raw/covbadge.json"/></a>
 <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg"/></a>
 
 ----
@@ -541,6 +541,7 @@ This outer factory takes an ``inspect.Parameter`` and returns a depedency factor
 ## 23.1.0 (UNRELEASED)
 
 * Fix dependencies satisfying themselves.
+* Switch to [PDM](https://pdm.fming.dev/latest/).
 
 ## 22.2.2 (2022-12-31)
 
