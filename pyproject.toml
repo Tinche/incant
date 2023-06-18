@@ -10,7 +10,7 @@ version = "23.1.0.dev0"
 requires-python = ">=3.8.1"
 description = "Magical function composition"
 readme = "README.md"
-dependencies = []
+dependencies = ["attrs"]
 license = {text = "Apache2"}
 
 [project.urls]
