@@ -1,10 +1,10 @@
 # incant🪄: a little magic for your functions
 
-<a href="https://pypi.python.org/pypi/incant"><img src="https://img.shields.io/pypi/v/incant.svg"/></a>
-<a href="https://github.com/Tinche/incant/actions?workflow=CI"><img src="https://github.com/Tinche/incant/workflows/CI/badge.svg"/></a>
-<a href="https://github.com/Tinche/incant/actions/workflows/main.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Tinche/31981273f39dab936f0000563a30ce3f/raw/covbadge.json"/></a>
-<a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg"/></a>
-
+[![PyPI](https://img.shields.io/pypi/v/incant.svg)](https://pypi.python.org/pypi/incant)
+[![Build](https://github.com/Tinche/incant/workflows/CI/badge.svg)](https://github.com/Tinche/incant/actions?workflow=CI)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Tinche/31981273f39dab936f0000563a30ce3f/raw/covbadge.json)](https://github.com/Tinche/incant/actions/workflows/main.yml)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/incant.svg)](https://github.com/Tinche/incant)
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ----
 
 **incant** is a Python open source library for composing and invoking functions.
