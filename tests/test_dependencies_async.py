@@ -7,7 +7,7 @@ import pytest
 
 from quattro import TaskGroup
 
-from incant import Incanter, IncantError
+from incant import Incanter
 
 
 async def test_async_invoke(incanter: Incanter):
@@ -23,7 +23,7 @@ async def test_async_dep(incanter: Incanter):
     async def dep1() -> int:
         return 1
 
-    with pytest.raises(IncantError):
+    with pytest.raises(TypeError):
         incanter.invoke(lambda dep1: dep1 + 1)
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1)) == 2
@@ -41,7 +41,7 @@ async def test_async_mixed_dep(incanter: Incanter):
     def _(input: int) -> int:
         return input + 1
 
-    with pytest.raises(IncantError):
+    with pytest.raises(TypeError):
         incanter.invoke(lambda dep1: dep1 + 1, 1)
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1, 1)) == 4
