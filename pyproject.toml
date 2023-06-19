@@ -17,7 +17,7 @@ license = {file = "LICENSE"}
 Home = "https://github.com/Tinche/incant"
 
 [tool.pdm.dev-dependencies]
-dev = [
+test = [
     "cattrs>=22.2.0",
     "coverage>=7.0.1",
     "httpx>=0.23.1",
