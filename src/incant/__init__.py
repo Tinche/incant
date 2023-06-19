@@ -27,7 +27,7 @@ from ._codegen import (
 from ._compat import NO_OVERRIDE, Override, get_annotated_override, signature
 
 
-__all__ = ["NO_OVERRIDE", "Override", "Hook", "Incanter"]
+__all__ = ["NO_OVERRIDE", "Override", "Hook", "Incanter", "IncantError"]
 
 _type = type
 
@@ -165,7 +165,7 @@ class Incanter:
                 sig = signature(fn)
                 type_to_reg = sig.return_annotation
                 if type_to_reg is Signature.empty:
-                    raise Exception("No return type found, provide a type.")
+                    raise IncantError("No return type found, provide a type.")
         else:
             type_to_reg = type
         self.register_hook(
@@ -230,7 +230,7 @@ class Incanter:
             if found:
                 continue
 
-            elif arg.annotation is not Signature.empty:
+            if arg.annotation is not Signature.empty:
                 for ix, a in enumerate(pos_args_types):
                     if is_subclass(a, arg.annotation):
                         pos_arg_plan.append(ix)
@@ -256,10 +256,9 @@ class Incanter:
         is_async: Optional[bool] = False,
     ) -> Callable:
         plan = self._gen_incant_plan(fn, pos_args_types, kwargs_by_name_and_type)
-        incant = compile_incant_wrapper(
+        return compile_incant_wrapper(
             fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
         )
-        return incant
 
     def _gen_dep_tree(
         self,
@@ -304,13 +303,12 @@ class Incanter:
                                 if factory == node:
                                     # A hook cannot satisfy itself.
                                     continue
-                                else:
-                                    if factory not in already_processed_hooks:
-                                        to_process.append((factory, hook.factory[1]))
-                                        already_processed_hooks.add(factory)
-                                    dependents.append(
-                                        FactoryDep(factory, name, hook.factory[1])
-                                    )
+                                if factory not in already_processed_hooks:
+                                    to_process.append((factory, hook.factory[1]))
+                                    already_processed_hooks.add(factory)
+                                dependents.append(
+                                    FactoryDep(factory, name, hook.factory[1])
+                                )
 
                             break
                     else:
@@ -398,10 +396,10 @@ class Incanter:
                 for arg in args:
                     try:
                         arg_type = _reconcile_types(arg_type, arg.type)
-                    except Exception:
-                        raise Exception(
+                    except Exception as exc:
+                        raise IncantError(
                             f"Unable to reconcile types {arg_type} and {arg.type} for argument {arg_name}"
-                        )
+                        ) from exc
                     if arg.default is not Signature.empty:
                         arg_default = arg.default
             outer_args.append(ParameterDep(arg_name, arg_type, arg_default))
@@ -441,3 +439,7 @@ def _signature(f: Callable) -> Signature:
     sig = signature(f)
     parameters = [get_annotated_override(val) for val in sig.parameters.values()]
     return sig.replace(parameters=parameters)
+
+
+class IncantError(Exception):
+    """An Incant error."""

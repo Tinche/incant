@@ -78,7 +78,7 @@ jobs:
           name: "html-report"
           path: "htmlcov"
       
-      - name: "Make badge"
+      - name: "Update badge"
         if: github.ref == 'refs/heads/main'
         uses: "schneegans/dynamic-badges-action@v1.4.0"
         with:

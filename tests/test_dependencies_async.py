@@ -23,8 +23,8 @@ async def test_async_dep(incanter: Incanter):
     async def dep1() -> int:
         return 1
 
-    with pytest.raises(Exception):
-        incanter.invoke(lambda dep1: dep1 + 1) == 2
+    with pytest.raises(TypeError):
+        incanter.invoke(lambda dep1: dep1 + 1)
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1)) == 2
     assert signature(
@@ -41,7 +41,7 @@ async def test_async_mixed_dep(incanter: Incanter):
     def _(input: int) -> int:
         return input + 1
 
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         incanter.invoke(lambda dep1: dep1 + 1, 1)
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1, 1)) == 4

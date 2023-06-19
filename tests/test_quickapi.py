@@ -20,7 +20,7 @@ class UvicornTestServer(Server):
 async def quickapi_server(unused_tcp_port_factory):
     port = unused_tcp_port_factory()
     s = UvicornTestServer(Config(app=app, port=port))
-    create_task(s.serve())
+    _ = create_task(s.serve())
     yield f"http://localhost:{port}"
     s.should_exit = True
     await sleep(0.2)

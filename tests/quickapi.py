@@ -70,8 +70,7 @@ incanter.register_by_name(
 def make_header_factory(name: str, default):
     if default is Parameter.empty:
         return lambda: request.headers[name.replace("_", "-")]
-    else:
-        return lambda: request.headers.get(name.replace("_", "-"), default)
+    return lambda: request.headers.get(name.replace("_", "-"), default)
 
 
 incanter.register_hook_factory(
