@@ -4,9 +4,9 @@ from inspect import Parameter, signature
 
 import pytest
 
-from attr import define
+from attrs import define
 
-from incant import Incanter
+from incant import Incanter, IncantError
 
 
 def test_simple_dep(incanter: Incanter):
@@ -137,10 +137,10 @@ def test_shared_deps_incompatible(incanter: Incanter):
     def func(dep1, input: float) -> float:
         return dep1 + 1 + input
 
-    with pytest.raises(Exception):
+    with pytest.raises(IncantError):
         incanter.prepare(func)
 
-    with pytest.raises(Exception):
+    with pytest.raises(IncantError):
         incanter.invoke(func, 5.0)
 
 
@@ -168,7 +168,7 @@ def test_no_return_type(incanter: Incanter):
     def dep():
         return 1
 
-    with pytest.raises(Exception):
+    with pytest.raises(IncantError):
         incanter.register_by_type(dep)
 
 

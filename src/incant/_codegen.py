@@ -201,8 +201,7 @@ def compile_invoke(
     fname = _generate_unique_filename(fn.__name__, "invoke", lines)
     eval(compile(script, fname, "exec"), globs)
 
-    fn = globs[fn_name]
-    return fn
+    return globs[fn_name]
 
 
 def compile_incant_wrapper(
@@ -234,8 +233,7 @@ def compile_incant_wrapper(
     fname = _generate_unique_filename(fn.__name__, "incant", lines)
     eval(compile(script, fname, "exec"), globs)
 
-    fn = globs[fn_name]
-    return fn
+    return globs[fn_name]
 
 
 def _generate_unique_filename(func_name: str, func_type: str, source: List[str]) -> str:
