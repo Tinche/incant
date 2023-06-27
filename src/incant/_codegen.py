@@ -52,8 +52,10 @@ def compile_invoke(
 
     for dep in outer_args:
         if dep.type is not Signature.empty:
-            type_name = dep.type.__name__
-            if type_name not in globs or globs[type_name] is dep.type:
+            # Some types, like new unions (`int|str`), do not have names.
+            if (type_name := getattr(dep.type, "__name__", None)) and (
+                type_name not in globs or globs[type_name] is dep.type
+            ):
                 arg_type_snippet = f": {type_name}"
                 globs[type_name] = dep.type
             else:
