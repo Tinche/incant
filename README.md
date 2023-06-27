@@ -5,33 +5,34 @@
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Tinche/31981273f39dab936f0000563a30ce3f/raw/covbadge.json)](https://github.com/Tinche/incant/actions/workflows/main.yml)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/incant.svg)](https://github.com/Tinche/incant)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-----
+
+---
 
 **incant** is a Python open source library for composing and invoking functions.
 Going by the old, humorous adage that dependency injection is simply passing arguments to functions, _incant_ is a toolkit that is well suited to that use case.
 
 _incant_ includes support for:
 
-* matching dependencies by anything in ``inspect.Parameter``, including the parameter name, type annotation and default value
-* convenient APIs for matching by parameter name and type annotation
-* sync and async functions and dependencies
-* sync and async context manager dependencies
-* no global state
-* attaching arbitrary external dependencies to functions (``forced dependencies``), commonly used for side-effects
+- matching dependencies by anything in `inspect.Parameter`, including the parameter name, type annotation and default value
+- convenient APIs for matching by parameter name and type annotation
+- sync and async functions and dependencies
+- sync and async context manager dependencies
+- no global state
+- attaching arbitrary external dependencies to functions (`forced dependencies`), commonly used for side-effects
 
 _incant_ has a very lean API surface, the core API being:
 
-* a single class, ``incant.Incanter``, for keeping state (dependency rules)
-* a method for registering dependencies: ``Incanter.register_hook()``, and a number of higher level, more user-friendly aliases
-* methods for invoking arbitrary functions while injecting dependencies: ``Incanter.invoke()`` and its async variant, ``Incanter.ainvoke()``
-* methods for invoking arbitrary functions while picking and forwarding any required arguments: ``Incanter.incant`` and its async variant, ``Incanter.aincant``
+- a single class, `incant.Incanter`, for keeping state (dependency rules)
+- a method for registering dependencies: `Incanter.register_hook()`, and a number of higher level, more user-friendly aliases
+- methods for invoking arbitrary functions while injecting dependencies: `Incanter.invoke()` and its async variant, `Incanter.ainvoke()`
+- methods for invoking arbitrary functions while picking and forwarding any required arguments: `Incanter.incant` and its async variant, `Incanter.aincant`
 
 _incant_ is able to leverage runtime type annotations, but is also capable of functioning without them.
 _incant_ is also fully type-annotated for use with Mypy and smart editors.
 
 The tutorial section below contains a walkthough and some real-life use cases of _incant_.
 
-An easy way to remember the difference between ``invoke`` and ``incant`` - ``incant`` is more magical, like a magical incantation.
+An easy way to remember the difference between `invoke` and `incant` - `incant` is more magical, like a magical incantation.
 
 If you're coming from a _pytest_ background, _incant_ dependency factories are roughly equivalent to _pytest_ fixtures.
 
@@ -46,7 +47,7 @@ $ pip install incant
 # Tutorial
 
 This section contains a long, narrative-style guide to _incant_.
-There is a *Usage* section below with a more focused description of the library API.
+There is a _Usage_ section below with a more focused description of the library API.
 
 Let's demonstrate the use of _incant_ with a number of hypothetical scenarios.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
@@ -69,8 +70,8 @@ async def index():
 ## Simple Dependencies
 
 After a while, your colleague says they require the IP address of the incoming request.
-You explain the Quart API for this (``request.remote_addr``), but your colleague is adamant about following best practices (avoiding global variables) - they want it as an argument to their handler.
-They also want it as an instance of Python's ``ipaddress.IPv4Address``. Their handler looks like this:
+You explain the Quart API for this (`request.remote_addr`), but your colleague is adamant about following best practices (avoiding global variables) - they want it as an argument to their handler.
+They also want it as an instance of Python's `ipaddress.IPv4Address`. Their handler looks like this:
 
 ```python
 @app.get("/ip")
@@ -80,7 +81,7 @@ async def ip_address_handler(source_ip: IPv4Address) -> str:
 
 Well, looks like you've got your work cut out for you.
 
-At the top of the file, you import and prepare an ``incant.Incanter`` instance.
+At the top of the file, you import and prepare an `incant.Incanter` instance.
 
 ```python
 from incant import Incanter
@@ -100,12 +101,12 @@ def get_ip_address() -> IPv4Address:
     return IPv4Address(request.remote_addr)
 ```
 
-This means any function invoked through the `Incanter` will have any parameters annotated as ``IPv4Address`` satisfied by calling the ``get_ip_address`` dependency factory.
+This means any function invoked through the `Incanter` will have any parameters annotated as `IPv4Address` satisfied by calling the `get_ip_address` dependency factory.
 
-You contemplate how to get this information to the ``ip_address_handler``, and choose to write a simple decorator (yay Python!).
+You contemplate how to get this information to the `ip_address_handler`, and choose to write a simple decorator (yay Python!).
 Your colleague agrees, but (citing consistency) wants the decorator to be applied to all handlers going forward.
 
-(You could solve this more elegantly by subclassing the ``quart.Quart`` class but forgo this as this is an _incant_ tutorial, not a Quart one.)
+(You could solve this more elegantly by subclassing the `quart.Quart` class but forgo this as this is an _incant_ tutorial, not a Quart one.)
 
 You rub your hands and mutter "Let's roll" to yourself.
 
@@ -120,7 +121,7 @@ def quickapi(handler):
     return wrapper
 ```
 
-``incanter.ainvoke`` (the async version of ``invoke``) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
+`incanter.ainvoke` (the async version of `invoke`) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
 
 Then you just apply the decorators to both existing handlers.
 
@@ -143,7 +144,7 @@ async def even_or_odd_handler(integer: int) -> str:
     return "odd" if integer % 2 != 0 else "even"
 ```
 
-Quart provides path parameters like this to handlers as ``kwargs``, so you modify the ``quickapi`` decorator a little:
+Quart provides path parameters like this to handlers as `kwargs`, so you modify the `quickapi` decorator a little:
 
 ```python
 def quickapi(handler):
@@ -159,7 +160,7 @@ This works because _incant_ will use arguments provided to `invoke` if it cannot
 
 Another day of earning your keep!
 
-## The Magic of ``incant``
+## The Magic of `incant`
 
 Some time later, another colleague approaches you asking for a logger to be provided to their handler.
 They want to use structured logging, and they want the logger to already be bound with the name of the handler.
@@ -183,7 +184,7 @@ from structlog.stdlib import BoundLogger, get_logger
 logger = get_logger()  # Useful to have a module-scoped one first.
 ```
 
-You change the ``quickapi`` decorator to create and use a logger with the current handler name:
+You change the `quickapi` decorator to create and use a logger with the current handler name:
 
 ```python
 def quickapi(handler):
@@ -197,20 +198,20 @@ def quickapi(handler):
     return wrapper
 ```
 
-You can't make the logger a dependency within the ``Incanter`` though, since it depends on handler-specific data.
+You can't make the logger a dependency within the `Incanter` though, since it depends on handler-specific data.
 (You could have a separate incanter for each handler, but that's inefficient.)
 
 If the incanter cannot find a dependency to fulfil a parameter, you need to provide it yourself - just like with the path parameters.
-Since the ``index`` and ``ip_address_handler`` don't require the logger, we can keep invoking them as before.
-However, the ``logging_handler`` handler requires it. Without changes, invoking the handler will let you know:
+Since the `index` and `ip_address_handler` don't require the logger, we can keep invoking them as before.
+However, the `logging_handler` handler requires it. Without changes, invoking the handler will let you know:
 
 ```python
 TypeError: invoke_logging_handler() missing 1 required positional argument: 'log'
 ```
 
-You change the ``quickapi`` decorator to use ``Incanter.aincant`` (the async version of ``Incanter.incant``) and always pass in the logger instance.
+You change the `quickapi` decorator to use `Incanter.aincant` (the async version of `Incanter.incant`) and always pass in the logger instance.
 _incant_ is meant for cases like this, forwarding the parameters if they are needed and skipping them otherwise.
-Since _incant_ doesn't itself call ``invoke``, you prepare it yourself beforehand.
+Since _incant_ doesn't itself call `invoke`, you prepare it yourself beforehand.
 
 ```python
 def quickapi(handler):
@@ -226,12 +227,12 @@ def quickapi(handler):
     return wrapper
 ```
 
-Since you're passing in the logger using ``kwargs``, it will match (after trying name+type) any parameter named ``log``.
+Since you're passing in the logger using `kwargs`, it will match (after trying name+type) any parameter named `log`.
 
 ## Nested Dependencies
 
 A colleague is working on an authentication system for your product.
-They have a function that takes a cookie (named ``session_token``) and produces an instance of your user model.
+They have a function that takes a cookie (named `session_token`) and produces an instance of your user model.
 
 ```python
 from attrs import define
@@ -256,7 +257,7 @@ async def user_handler(user: User, log) -> str:
     return "After the user handler"
 ```
 
-You can use their ``current_user`` coroutine directly as a dependency factory:
+You can use their `current_user` coroutine directly as a dependency factory:
 
 ```python
 incanter.register_by_type(current_user)
@@ -270,8 +271,8 @@ You define a dependency factory for the session token cookie:
 incanter.register_by_name(lambda: request.cookies['session_token'], name="session_token")
 ```
 
-Because of how ``request.cookies`` works on Quart, this handler will respond with ``400`` if the cookie is not present, or run the handler otherwise.
-But only for the handlers that require the ``User`` dependency.
+Because of how `request.cookies` works on Quart, this handler will respond with `400` if the cookie is not present, or run the handler otherwise.
+But only for the handlers that require the `User` dependency.
 
 Pretty cool!
 
@@ -308,7 +309,7 @@ You decide to start working on making your services more robust.
 Your plan is to apply a limit to how long your service will process each request.
 The timeout should default to one second, or it can be provided from the calling service via a header.
 
-You decide to again use the _quattro_ library; it has a useful ``fail_after`` context manager that should do the trick.
+You decide to again use the _quattro_ library; it has a useful `fail_after` context manager that should do the trick.
 
 Since _incant_ supports context managers as dependencies, your path is clear:
 
@@ -320,9 +321,9 @@ def apply_timeout(timeout: Header = Header("1.0")) -> ContextManager[CancelScope
 ```
 
 However, our usual approach would require refactoring all our handlers to require this dependency.
-Instead, we will make this a *forced dependency*, which means _incant_ will run it for all handlers.
+Instead, we will make this a _forced dependency_, which means _incant_ will run it for all handlers.
 Since no handler needs the return value of any forced dependency (since they are unaware of them), they are mostly used for side-effects.
-We change the ``quickapi`` decorator thusly:
+We change the `quickapi` decorator thusly:
 
 ```python
 def quickapi(handler):
@@ -339,7 +340,7 @@ def quickapi(handler):
 ```
 
 Since it's not possible to accurately autodetect whether a forced dependency is or isn't a context manager,
-if it *is* a context manager you have to be explicit about it and supply a tuple like in the example.
+if it _is_ a context manager you have to be explicit about it and supply a tuple like in the example.
 
 ## Complex Rules
 
@@ -360,11 +361,11 @@ async def attrs_handler(payload: SamplePayload, log) -> str:
     return "After payload"
 ```
 
-They want this to work for *any* _attrs_ class.
+They want this to work for _any_ _attrs_ class.
 You know you can reach for the _cattrs_ library to load an _attrs_ class from JSON, but the dependency hook is a little more complex.
-Because the dependency hook needs to work for *any* _attrs_ class, you need to use ``incanter.register_hook_factory``, the most powerful but lowest level hook registration method.
+Because the dependency hook needs to work for _any_ _attrs_ class, you need to use `incanter.register_hook_factory`, the most powerful but lowest level hook registration method.
 
-``incanter.register_hook_factory`` is for, like the name says, factories of dependency hooks.
+`incanter.register_hook_factory` is for, like the name says, factories of dependency hooks.
 It will produce a different dependency hook for each _attrs_ class we encounter, which is what we need.
 
 ```python
@@ -388,16 +389,16 @@ incanter.register_hook_factory(
 )
 ```
 
-This will also return a ``400`` status code if the payload cannot be properly loaded.
+This will also return a `400` status code if the payload cannot be properly loaded.
 
-Because of how _incant_ evaluates dependency rules (newest first), this hook factory needs to be registered before the ``current_user`` dependency factory.
-Otherwise, since our ``User`` model is also an _attrs_ class, `incant` would try loading it from the request body instead of getting it from the ``current_user`` dependency factory.
+Because of how _incant_ evaluates dependency rules (newest first), this hook factory needs to be registered before the `current_user` dependency factory.
+Otherwise, since our `User` model is also an _attrs_ class, `incant` would try loading it from the request body instead of getting it from the `current_user` dependency factory.
 
 ## Complex Rules Pt 2: Electric Boogaloo
 
 A colleague wants to receive HTTP headers in their handler.
 They also want these parameters to be able to have default values.
-You decide to create a simple string subclass called ``Header`` and have your colleague annotate their parameters with it.
+You decide to create a simple string subclass called `Header` and have your colleague annotate their parameters with it.
 Their header looks like this:
 
 ```python
@@ -412,7 +413,7 @@ async def a_header_handler(content_type: Header = Header("none"), log=logger) ->
 ```
 
 Since each header parameter needs separate logic, you once again reach for hook factories.
-You remember kebab-case is more commonly used than snake_case for headers, so you apply a small transformation - a parameter named ``content_type`` will get the value of the ``content-type`` header field.
+You remember kebab-case is more commonly used than snake_case for headers, so you apply a small transformation - a parameter named `content_type` will get the value of the `content-type` header field.
 
 You write the necessary instructions:
 
@@ -434,7 +435,7 @@ The complete source code of this mini-project can be found at https://github.com
 
 This section contains a quick usage guide to _incant_.
 
-State (in the form of dependency factories) is kept in an instance of ``incant.Incanter``.
+State (in the form of dependency factories) is kept in an instance of `incant.Incanter`.
 
 ```python
 from incant import Incanter
@@ -442,8 +443,8 @@ from incant import Incanter
 incanter = Incanter()
 ```
 
-The ``incanter`` can now be used to call functions (``invoke``) and coroutines (``ainvoke``).
-Since there are no dependency factories registered yet, ``incanter.invoke(fn, a, b, c)`` is equivalent to ``fn(a, b, c)``.
+The `incanter` can now be used to call functions (`invoke`) and coroutines (`ainvoke`).
+Since there are no dependency factories registered yet, `incanter.invoke(fn, a, b, c)` is equivalent to `fn(a, b, c)`.
 
 ```python
 def my_function(my_argument):
@@ -461,7 +462,7 @@ def my_argument():
     return 2
 ```
 
-The result of this dependency factory will be substituted when we invoke a function that has an argument named ``my_argument``.
+The result of this dependency factory will be substituted when we invoke a function that has an argument named `my_argument`.
 
 ```python
 incanter.invoke(my_function)
@@ -485,11 +486,11 @@ incanter.invoke(another_function)
 Dependency factories may themselves have dependencies provided to them, as shown in the above example.
 _incant_ performs a depth-first pass of gathering nested dependencies.
 
-``incanter.invoke`` uses ``incanter.prepare`` internally.
-``prepare`` does the actual heavy lifting of creating and caching a wrapper with the dependencies processed and wired.
+`incanter.invoke` uses `incanter.prepare` internally.
+`prepare` does the actual heavy lifting of creating and caching a wrapper with the dependencies processed and wired.
 It's useful for getting the wrappers for caching or inspection - the wrappers support ordinary Python introspection using the standard library `inspect` module.
 
-``prepare`` also allows customizing the wrapper without adding hooks to the actual ``Incanter``.
+`prepare` also allows customizing the wrapper without adding hooks to the actual `Incanter`.
 
 ```python
 from incant import Hook
@@ -524,66 +525,67 @@ Also be aware that since in Python lambdas don't play well with caching, if you'
 >>> incanter.prepare(lambda: my_argument, additional_hooks)()  # Now uses the cache.
 ```
 
-Incanter instances also have a helper method, ``incanter.incant`` (and ``incanter.aincant``), that serves as a smart helper for calling functions.
-``incanter.incant`` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
-``incanter.incant`` also composes nicely with ``prepare``, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
+Incanter instances also have a helper method, `incanter.incant` (and `incanter.aincant`), that serves as a smart helper for calling functions.
+`incanter.incant` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
+`incanter.incant` also composes nicely with `prepare`, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
 
-``register_by_name`` and ``register_by_type`` delegate to ``incanter.register_hook``.
-``register_hook`` takes a predicate function and a dependency factory.
-When determining if a depency factory can be used for a parameter, ``incant`` will try predicate functions (from newest to oldest) until one matches and use that dependency.
-Predicate functions take an ``inspect.Parameter`` and return a ``bool``, so they can match using anything present in ``Parameter``.
+`register_by_name` and `register_by_type` delegate to `incanter.register_hook`.
+`register_hook` takes a predicate function and a dependency factory.
+When determining if a depency factory can be used for a parameter, `incant` will try predicate functions (from newest to oldest) until one matches and use that dependency.
+Predicate functions take an `inspect.Parameter` and return a `bool`, so they can match using anything present in `Parameter`.
 
-``register_hook`` delegates to ``register_hook_factory``, which takes a predicate function and a factory of depedendency factories.
-This outer factory takes an ``inspect.Parameter`` and returns a depedency factory, enabling generic depedendency factories.
+`register_hook` delegates to `register_hook_factory`, which takes a predicate function and a factory of depedendency factories.
+This outer factory takes an `inspect.Parameter` and returns a depedency factory, enabling generic depedendency factories.
 
 # Changelog
 
 ## 23.1.0 (UNRELEASED)
 
-* Fix dependencies satisfying themselves.
-* Switch to [PDM](https://pdm.fming.dev/latest/).
+- Fix dependencies satisfying themselves.
+- Switch to [PDM](https://pdm.fming.dev/latest/).
+- Fix parameter dependencies using the new union syntax.
 
 ## 22.2.2 (2022-12-31)
 
-* Fix an optimization for explicitly sync functions.
-* Fix an issue incanting unnecessary positional arguments.
-* Support ``__future__`` annotations (PEP 563) on Python 3.10+.
+- Fix an optimization for explicitly sync functions.
+- Fix an issue incanting unnecessary positional arguments.
+- Support `__future__` annotations (PEP 563) on Python 3.10+.
 
 ## 22.2.1 (2022-12-27)
 
-* Fix an issue when wrapping a sync function with an async one.
+- Fix an issue when wrapping a sync function with an async one.
 
 ## 22.2.0 (2022-12-26)
 
-* Python 3.11 support.
-* Fix ``unbound local error`` while generating code.
+- Python 3.11 support.
+- Fix `unbound local error` while generating code.
   ([#4](https://github.com/Tinche/incant/issues/4))
-* Avoid using local variables in generated code when possible.
-* When ``incant.prepare`` cannot do anything for a function, return the original function for efficiency.
+- Avoid using local variables in generated code when possible.
+- When `incant.prepare` cannot do anything for a function, return the original function for efficiency.
 
 ## 22.1.0 (2022-09-02)
 
-* *Breaking change*: due to limitations in autodetecting context managers (both sync and async), context manager dependencies must be explicitly registered by passing ``is_context_manager="sync"`` (or ``async``) to the registration functions.
-* Injection can be customized on a per-parameter basis by annotating a parameter with ``Annotated[type, incant.Override(...)]``.
-* Implement support for forced dependencies.
-* Sync context managers may now be dependencies.
-* ``incanter.a/incant()`` now handles unfulfilled parameters with defaults properly.
-* Switched to CalVer.
+- _Breaking change_: due to limitations in autodetecting context managers (both sync and async), context manager dependencies must be explicitly registered by passing `is_context_manager="sync"` (or `async`) to the registration functions.
+- Injection can be customized on a per-parameter basis by annotating a parameter with `Annotated[type, incant.Override(...)]`.
+- Implement support for forced dependencies.
+- Sync context managers may now be dependencies.
+- `incanter.a/incant()` now handles unfulfilled parameters with defaults properly.
+- Switched to CalVer.
 
 ## 0.3.0 (2022-02-03)
 
-* Properly set the return type annotation when preparing a function.
-* A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting ``Hook.factory`` to ``None``.
-* Parameters with defaults are now supported for ``incanter.prepare`` and ``incanter.a/invoke``.
-* ``incanter.a/incant`` no longer uses ``invoke`` under the hood, to allow greater customization. Previous behavior can be replicated by ``incant(prepare(fn))``.
-* Optional arguments of dependencies can now be propagated to final function arguments. Keyword-only arguments of dependencies are still filtered out.
+- Properly set the return type annotation when preparing a function.
+- A hook override can now force a dependency to be promoted to a parameter (instead of being satisfied) by setting `Hook.factory` to `None`.
+- Parameters with defaults are now supported for `incanter.prepare` and `incanter.a/invoke`.
+- `incanter.a/incant` no longer uses `invoke` under the hood, to allow greater customization. Previous behavior can be replicated by `incant(prepare(fn))`.
+- Optional arguments of dependencies can now be propagated to final function arguments. Keyword-only arguments of dependencies are still filtered out.
 
 ## 0.2.0 (2022-01-13)
 
-* Introduce ``incanter.prepare``, and make ``incanter.a/invoke`` use it. ``prepare`` just generates the prepared injection wrapper for a function and returns it, without executing it.
-* Remove ``incanter.parameters``, since it's now equivalent to ``inspect.signature(incanter.prepare(fn)).parameters``.
-* Add the ability to pass hook overrides to ``incanter.prepare``, and introduce the ``incanter.Hook`` class to make it more usable.
+- Introduce `incanter.prepare`, and make `incanter.a/invoke` use it. `prepare` just generates the prepared injection wrapper for a function and returns it, without executing it.
+- Remove `incanter.parameters`, since it's now equivalent to `inspect.signature(incanter.prepare(fn)).parameters`.
+- Add the ability to pass hook overrides to `incanter.prepare`, and introduce the `incanter.Hook` class to make it more usable.
 
 ## 0.1.0 (2022-01-10)
 
-* Initial release.
+- Initial release.

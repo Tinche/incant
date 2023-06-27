@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from contextlib import contextmanager
 from inspect import Parameter, signature
+from sys import version_info
 
 import pytest
 
@@ -303,3 +304,24 @@ def test_parameter_name_overwriting(incanter: Incanter) -> None:
             "another_int", Parameter.POSITIONAL_OR_KEYWORD, annotation=int
         )
     }
+
+
+@pytest.mark.skipif(
+    version_info[:2] <= (3, 9), reason="New union syntax required 3.10+"
+)
+def test_new_unions(incanter: Incanter) -> None:
+    """Parameters with new union syntax work."""
+
+    @incanter.register_by_name
+    def provide_int() -> int:
+        return 1
+
+    def func(an_int: int | str, provide_int: int) -> int:
+        return int(an_int) + provide_int
+
+    prepared = incanter.prepare(func)
+
+    # Be careful we don't accidentally optimize this away.
+    assert prepared is not func
+
+    assert prepared("1") == 2
