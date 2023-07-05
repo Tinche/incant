@@ -35,7 +35,7 @@ _incant_ has a very lean API surface, the core API being:
 _incant_ is able to leverage runtime type annotations, but is also capable of functioning without them.
 _incant_ is also fully type-annotated for use with Mypy and smart editors.
 
-The tutorial section below contains a walkthough and some real-life use cases of _incant_.
+The [Tutorial](tutorial.md) contains a walkthough and some real-life use cases of _incant_.
 
 An easy way to remember the difference between `invoke` and `incant` - `incant` is more magical, like a magical incantation.
 
