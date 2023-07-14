@@ -5,7 +5,17 @@ build-backend = "hatchling.build"
 [project]
 name = "incant"
 authors = [{name = "Tin Tvrtkovic", email = "tinchester@gmail.com"}]
-classifiers = ["License :: OSI Approved :: Apache Software License"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Typing :: Typed",
+]
 version = "23.1.0.dev0"
 requires-python = ">=3.8"
 description = "Magical function composition"
