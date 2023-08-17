@@ -109,11 +109,17 @@ class Incanter:
             tuple(f if isinstance(f, tuple) else (f, None) for f in forced_deps),
         )
 
-    def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
+    def call(self, fn: Callable[..., R], *args, **kwargs) -> R:
+        """Prepare `fn` and call it with the given parameters."""
         return self.prepare(fn, is_async=False)(*args, **kwargs)
 
-    async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
+    invoke = call
+
+    async def acall(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
+        """Prepare `fn` as async and call it with the given parameters."""
         return await self.prepare(fn, is_async=True)(*args, **kwargs)
+
+    ainvoke = acall
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
@@ -122,6 +128,9 @@ class Incanter:
     async def aincant(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         """Invoke async `fn` the best way we can."""
         return await self._incant(fn, args, kwargs, is_async=True)
+
+    def prepare_for_incant(self):
+        """Prepare `fn` for incantation"""
 
     def register_by_name(
         self,
