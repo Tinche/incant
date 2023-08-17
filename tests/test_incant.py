@@ -1,6 +1,7 @@
 import pytest
 
 from incant import Incanter
+from typing import Literal
 
 
 def test_no_args(incanter: Incanter):
@@ -80,3 +81,14 @@ def test_kwargs_subclasses(incanter: Incanter) -> None:
         return x + 1
 
     assert incanter.incant(func, x=SubInt(2)) == 3
+
+
+def test_incant_prepare(incanter: Incanter):
+    """Simple cases of prepare_incant work."""
+
+    def func(x: Literal[0]) -> int:
+        return x + 1
+
+    prepped = incanter.prepare_for_incant(func, lambda p: p.annotation == Literal[0])
+
+    assert prepped(1) == 2

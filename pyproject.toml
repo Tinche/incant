@@ -87,10 +87,12 @@ select = [
     "PLC", # Pylint
     "PIE", # flake8-pie
     "RUF", # ruff
+    "ARG", # flake8-unused-arguments
 ]
 ignore = [
     "E501",   # line length is handled by black
     "S101",   # assert
+    "S307",   # Eval
     "PGH001", # No eval lol?
     "PGH003", # leave my type: ignores alone
     "B008",   # can't get it to work with extend-immutable-calls

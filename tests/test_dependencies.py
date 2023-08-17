@@ -15,13 +15,13 @@ def test_simple_dep(incanter: Incanter):
         return dep1 + 1
 
     with pytest.raises(TypeError):
-        incanter.invoke(func)
+        incanter.call(func)
     assert signature(incanter.prepare(func)).parameters == {
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
     }
 
     incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
-    assert incanter.invoke(func) == 3
+    assert incanter.call(func) == 3
 
     assert signature(incanter.prepare(func)).parameters == {}
     assert signature(incanter.prepare(func)).return_annotation is int
@@ -35,7 +35,7 @@ def test_nested_deps(incanter: Incanter):
         return dep1 + 1
 
     assert signature(incanter.prepare(func)).parameters == {}
-    assert incanter.invoke(func) == 4
+    assert incanter.call(func) == 4
 
 
 def test_nested_partial_deps(incanter: Incanter):
@@ -50,7 +50,7 @@ def test_nested_partial_deps(incanter: Incanter):
     assert signature(incanter.prepare(func)).parameters == {
         "input": Parameter("input", Parameter.POSITIONAL_OR_KEYWORD)
     }
-    assert incanter.invoke(func, 1) == 5
+    assert incanter.call(func, 1) == 5
 
 
 def test_nested_partial_deps_with_args(incanter: Incanter):
@@ -71,7 +71,7 @@ def test_nested_partial_deps_with_args(incanter: Incanter):
             ),
         ]
     )
-    assert incanter.invoke(func, 1, 5.0) == 10.0
+    assert incanter.call(func, 1, 5.0) == 10.0
 
 
 def test_nested_partial_deps_with_coalesce(incanter: Incanter):
@@ -82,7 +82,7 @@ def test_nested_partial_deps_with_coalesce(incanter: Incanter):
     def fn(arg: str):
         return "1.0" + arg
 
-    assert incanter.invoke(fn, 1.0) == "1.02.0"
+    assert incanter.call(fn, 1.0) == "1.02.0"
 
 
 def test_shared_params(incanter: Incanter):
@@ -100,7 +100,7 @@ def test_shared_params(incanter: Incanter):
             ),
         ]
     )
-    assert incanter.invoke(func, 5.0) == 14.0
+    assert incanter.call(func, 5.0) == 14.0
 
 
 def test_shared_deps_type_from_dep(incanter: Incanter):
@@ -123,7 +123,7 @@ def test_shared_deps_type_from_dep(incanter: Incanter):
             ),
         ]
     )
-    assert incanter.invoke(func, 5.0) == 14.0
+    assert incanter.call(func, 5.0) == 14.0
 
 
 def test_shared_deps_incompatible(incanter: Incanter):
@@ -142,7 +142,7 @@ def test_shared_deps_incompatible(incanter: Incanter):
         incanter.prepare(func)
 
     with pytest.raises(IncantError):
-        incanter.invoke(func, 5.0)
+        incanter.call(func, 5.0)
 
 
 def test_class_deps(incanter: Incanter):
@@ -151,7 +151,7 @@ def test_class_deps(incanter: Incanter):
         a: int
 
     incanter.register_hook(lambda p: p.name == "dep", Dep)
-    assert incanter.invoke(lambda dep: dep.a + 1, a=1)
+    assert incanter.call(lambda dep: dep.a + 1, a=1)
 
     assert signature(incanter.prepare(lambda dep: dep.a + 1)).parameters == OrderedDict(
         [
@@ -180,8 +180,8 @@ def test_optional_arg(incanter: Incanter):
     def dep(i=1):
         return i
 
-    assert incanter.invoke(lambda dep: dep + 1) == 2
-    assert incanter.invoke(lambda dep: dep + 1, 2) == 3
+    assert incanter.call(lambda dep: dep + 1) == 2
+    assert incanter.call(lambda dep: dep + 1, 2) == 3
     assert signature(incanter.prepare(lambda dep: dep + 1)).parameters == {
         "i": Parameter("i", Parameter.POSITIONAL_OR_KEYWORD, default=1)
     }
@@ -190,12 +190,12 @@ def test_optional_arg(incanter: Incanter):
 def test_same_type_arg_coalescing(incanter: Incanter):
     @incanter.register_by_name
     def dep(i: int) -> int:
-        return 1
+        return i + 1
 
     def fn(i: int, dep: int) -> int:
         return i + dep
 
-    assert incanter.invoke(fn, 1) == 2
+    assert incanter.call(fn, 1) == 3
 
 
 def test_shared_deps(incanter: Incanter) -> None:
@@ -210,7 +210,7 @@ def test_shared_deps(incanter: Incanter) -> None:
     def fn(dep2: int, dep1: int) -> int:
         return dep2 + dep1
 
-    assert incanter.invoke(fn) == 15
+    assert incanter.call(fn) == 15
 
 
 def test_ctx_manager_dep(incanter: Incanter):
@@ -234,7 +234,7 @@ def test_ctx_manager_dep(incanter: Incanter):
         assert entered
         return dep1 + 1
 
-    assert incanter.invoke(fn) == 2
+    assert incanter.call(fn) == 2
 
     assert entered
     assert exited
@@ -279,7 +279,7 @@ def test_ordering(incanter: Incanter) -> None:
     def func(x: int, y: int) -> int:
         return x + y
 
-    assert incanter.invoke(func) == 3
+    assert incanter.call(func) == 3
 
 
 def test_parameter_name_overwriting(incanter: Incanter) -> None:
@@ -297,7 +297,7 @@ def test_parameter_name_overwriting(incanter: Incanter) -> None:
 
     incanter.register_by_type(diff_arg_name, int)
 
-    assert incanter.invoke(func, 1) == 2
+    assert incanter.call(func, 1) == 2
 
     assert signature(incanter.prepare(func)).parameters == {
         "another_int": Parameter(

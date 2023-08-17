@@ -15,7 +15,7 @@ def test_simple_override(incanter: Incanter):
     def fn(dep1: int):
         return dep1 + 1
 
-    assert incanter.invoke(fn) == 6
+    assert incanter.call(fn) == 6
 
     additional_hooks = [Hook.for_name("dep1", lambda: 0)]
 
@@ -36,7 +36,7 @@ def test_override_to_parameter(incanter: Incanter):
     def fn(dep1: int):
         return dep1 + 1
 
-    assert incanter.invoke(fn) == 6
+    assert incanter.call(fn) == 6
 
     additional_hooks = [Hook.for_name("dep1", None)]
 
@@ -53,7 +53,7 @@ def test_individial_param_overriding_name(incanter: Incanter):
     def fn(dep1: Annotated[int, Override(name="dep2")]):
         return dep1
 
-    assert incanter.invoke(fn) == 5
+    assert incanter.call(fn) == 5
 
 
 def test_individial_param_overriding_type(incanter: Incanter):
@@ -63,4 +63,4 @@ def test_individial_param_overriding_type(incanter: Incanter):
     def fn(dep1: Annotated[str, Override(annotation=int)]):
         return dep1
 
-    assert incanter.invoke(fn) == 5
+    assert incanter.call(fn) == 5

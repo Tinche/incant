@@ -63,11 +63,11 @@ class Hook:
     factory: Optional[Tuple[Callable[[Parameter], Callable], Optional[CtxManagerKind]]]
 
     @classmethod
-    def for_name(cls, name: str, hook: Optional[Callable]):
+    def for_name(cls, name: str, hook: Optional[Callable]) -> "Hook":
         return cls(lambda p: p.name == name, None if hook is None else (lambda _: hook, None))  # type: ignore
 
     @classmethod
-    def for_type(cls, type: Any, hook: Optional[Callable]):
+    def for_type(cls, type: Any, hook: Optional[Callable]) -> "Hook":
         """Register by exact type (subclasses won't match)."""
         return cls(
             lambda p: p.annotation == type,
@@ -78,11 +78,9 @@ class Hook:
 @define
 class Incanter:
     hook_factory_registry: List[Hook] = Factory(list)
-    _invoke_cache: Callable = field(
+    _call_cache: Callable = field(
         init=False,
-        default=Factory(
-            lambda self: lru_cache(None)(self._gen_invoke), takes_self=True
-        ),
+        default=Factory(lambda self: lru_cache(None)(self._gen_call), takes_self=True),
     )
     _incant_cache: Callable = field(
         init=False,
@@ -100,9 +98,10 @@ class Incanter:
     ) -> Callable[..., R]:
         """Prepare a new function, encapsulating satisfied dependencies.
 
-        forced_deps: A sequence of dependencies that will be called even if `fn` doesn't require them explicitly.
+        :param forced_deps: A sequence of dependencies that will be used even if `fn`
+            doesn't require them explicitly.
         """
-        return self._invoke_cache(
+        return self._call_cache(
             fn,
             tuple(hooks),
             is_async,
@@ -127,10 +126,18 @@ class Incanter:
 
     async def aincant(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         """Invoke async `fn` the best way we can."""
-        return await self._incant(fn, args, kwargs, is_async=True)
+        return await self._incant(fn, args, kwargs)
 
-    def prepare_for_incant(self):
-        """Prepare `fn` for incantation"""
+    def prepare_for_incant(
+        self, fn: Callable[..., R], *args: PredicateFn, **kwargs: PredicateFn
+    ) -> Callable[..., R]:
+        """Prepare `fn` for incantation.
+
+        Args and kwargs shape the signature of the produced function.
+        """
+        return self._incant_cache(
+            fn, args, frozenset((k, v) for k, v in kwargs.items())
+        )
 
     def register_by_name(
         self,
@@ -199,7 +206,7 @@ class Incanter:
         self.hook_factory_registry.insert(
             0, Hook(predicate, (hook_factory, is_ctx_manager))
         )
-        self._invoke_cache.cache_clear()  # type: ignore
+        self._call_cache.cache_clear()  # type: ignore
         self._incant_cache.cache_clear()  # type: ignore
 
     def _incant(
@@ -207,48 +214,52 @@ class Incanter:
         fn: Callable,
         args: Tuple[Any, ...],
         kwargs: Dict[str, Any],
-        is_async: bool = False,
     ):
         """The shared entrypoint for ``incant`` and ``aincant``."""
 
-        pos_args_types = tuple([a.__class__ for a in args])
-        kwargs_by_name_and_type = frozenset(
-            [(k, v.__class__) for k, v in kwargs.items()]
+        pos_args = tuple(
+            lambda p, c=a.__class__: is_subclass(c, p.annotation) for a in args
         )
-        wrapper = self._incant_cache(
-            fn, pos_args_types, kwargs_by_name_and_type, is_async
+        kwargs_by_name_and_pred = frozenset(
+            [
+                (k, lambda p, c=v.__class__: is_subclass(c, p.annotation))
+                for k, v in kwargs.items()
+            ]
         )
+        wrapper = self._incant_cache(fn, pos_args, kwargs_by_name_and_pred)
 
         return wrapper(*args, **kwargs)
 
     def _gen_incant_plan(
-        self, fn, pos_args_types: Tuple[Any, ...], kwargs: Set[Tuple[str, Any]]
+        self,
+        fn: Callable,
+        pos_args: Tuple[PredicateFn, ...],
+        kwargs: Dict[str, PredicateFn],
     ) -> List[Union[int, str]]:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
         pos_arg_plan: List[Union[int, str]] = []
-        kwarg_names = {kw[0] for kw in kwargs}
         sig = signature(fn)
         for arg_name, arg in sig.parameters.items():
             found = False
-            if (
-                arg.annotation is not Signature.empty
-                and (arg_name, arg.annotation) in kwargs
-            ):
-                pos_arg_plan.append(arg_name)
-                found = True
+
+            for kwarg_pred in kwargs.values():
+                if kwarg_pred(arg):
+                    pos_arg_plan.append(arg_name)
+                    found = True
+                    break
             if found:
                 continue
 
             if arg.annotation is not Signature.empty:
-                for ix, a in enumerate(pos_args_types):
-                    if is_subclass(a, arg.annotation):
+                for ix, pred in enumerate(pos_args):
+                    if pred(arg):
                         pos_arg_plan.append(ix)
                         found = True
                         break
             if found:
                 continue
 
-            if arg_name in kwarg_names:
+            if arg_name in kwargs:
                 pos_arg_plan.append(arg_name)
             elif arg.default is not Signature.empty:
                 # An argument with a default we cannot fulfil is ok.
@@ -260,14 +271,11 @@ class Incanter:
     def _gen_incant(
         self,
         fn: Callable,
-        pos_args_types: Tuple,
-        kwargs_by_name_and_type: Set,
-        is_async: Optional[bool] = False,
+        pos_args: Tuple[PredicateFn, ...],
+        kwargs: Set[Tuple[str, PredicateFn]],
     ) -> Callable:
-        plan = self._gen_incant_plan(fn, pos_args_types, kwargs_by_name_and_type)
-        return compile_incant_wrapper(
-            fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
-        )
+        plan = self._gen_incant_plan(fn, pos_args, dict(kwargs))
+        return compile_incant_wrapper(fn, plan, len(pos_args), len(kwargs))
 
     def _gen_dep_tree(
         self,
@@ -330,7 +338,7 @@ class Incanter:
         dep_nodes.append(final_nodes[-1])
         return dep_nodes
 
-    def _gen_invoke(
+    def _gen_call(
         self,
         fn: Callable,
         hooks: Tuple[Hook, ...] = (),

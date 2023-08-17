@@ -15,10 +15,26 @@ async def test_async_invoke(incanter: Incanter):
         await sleep(0.001)
         return 2
 
-    assert (await incanter.ainvoke(fn)) == 2
+    assert (await incanter.acall(fn)) == 2
 
 
 async def test_async_dep(incanter: Incanter):
+    @incanter.register_by_name
+    async def dep1() -> int:
+        return 1
+
+    with pytest.raises(TypeError):
+        incanter.call(lambda dep1: dep1 + 1)
+
+    assert (await incanter.acall(lambda dep1: dep1 + 1)) == 2
+    assert signature(
+        incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
+    ).parameters == OrderedDict([])
+
+
+async def test_async_dep_invoke(incanter: Incanter):
+    """Same as `test_async_dep`, except use the aliases."""
+
     @incanter.register_by_name
     async def dep1() -> int:
         return 1
@@ -42,9 +58,9 @@ async def test_async_mixed_dep(incanter: Incanter):
         return input + 1
 
     with pytest.raises(TypeError):
-        incanter.invoke(lambda dep1: dep1 + 1, 1)
+        incanter.call(lambda dep1: dep1 + 1, 1)
 
-    assert (await incanter.ainvoke(lambda dep1: dep1 + 1, 1)) == 4
+    assert (await incanter.acall(lambda dep1: dep1 + 1, 1)) == 4
     assert signature(
         incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
     ).parameters == OrderedDict(
@@ -68,7 +84,7 @@ async def test_async_ctx_manager_dep(incanter: Incanter):
         nonlocal entered
         return dep1 + 1
 
-    assert (await incanter.ainvoke(fn)) == 2
+    assert (await incanter.acall(fn)) == 2
 
     assert entered
     assert exited
@@ -79,9 +95,10 @@ async def test_taskgroup_dep(incanter: Incanter):
     incanter.register_by_type(TaskGroup, is_ctx_manager="async")
 
     async def fn(tg: TaskGroup):
+        assert tg
         return 2
 
-    assert (await incanter.ainvoke(fn)) == 2
+    assert (await incanter.acall(fn)) == 2
 
 
 def test_async_invoke_return_type(incanter: Incanter):
