@@ -6,6 +6,11 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is when we need to start branches for older releases (only for emergencies).
 
+## 23.2.0 (UNRELEASED)
+- `Incanter.(a)invoke` has been renamed to {py:meth}`Incanter.(a)call <incant.Incanter.call>` for clarity.
+  `Incanter.(a)invoke` is still present as an alias for backwards compatibility.
+- Introduce {py:meth}`Incanter.prepare_for_incant <incant.Incanter.prepare_for_incant>`.
+
 ## 23.1.0 (2023-07-14)
 
 - Fix dependencies satisfying themselves.

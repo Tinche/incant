@@ -13,13 +13,13 @@ indices.md
 modules.rst
 ```
 
-**incant** is a Python open source library for composing and calling functions.
-Going by the old, humorous adage that dependency injection is simply passing arguments to functions, _incant_ is a toolkit that is well suited to that use case.
+**incant** is a Python open source library for two things: **composing** and **calling functions**.
+_Dependency injection_ is but one of many use-cases served well by _incant_.
 
 _incant_ includes support for:
 
+- a convenience layer with a simple API, based on a powerful and fast performance layer
 - matching dependencies by anything in [`inspect.Parameter`](https://docs.python.org/3/library/inspect.html#inspect.Parameter), including the parameter name, type annotation and default value
-- convenient APIs for matching by parameter name and type annotation
 - sync and async functions and dependencies
 - sync and async context manager dependencies
 - no global state
@@ -36,8 +36,6 @@ _incant_ is able to leverage runtime type annotations, but is also capable of fu
 _incant_ is also fully type-annotated for use with Mypy and smart editors.
 
 The [Tutorial](tutorial.md) contains a walkthough and some real-life use cases of _incant_.
-
-An easy way to remember the difference between `invoke` and `incant` - `incant` is more magical, like a magical incantation.
 
 If you're coming from a _pytest_ background, _incant_ dependency factories are roughly equivalent to _pytest_ fixtures.
 
