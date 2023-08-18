@@ -1,7 +1,8 @@
+from typing import Literal
+
 import pytest
 
 from incant import Incanter
-from typing import Literal
 
 
 def test_no_args(incanter: Incanter):
