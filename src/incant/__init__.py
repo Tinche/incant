@@ -77,6 +77,12 @@ class Hook:
 
 @define
 class Incanter:
+    """A registry of _hooks_, used for function composition.
+
+    Hooks use predicate functions to define rules of how they bind to function
+    arguments.
+    """
+
     hook_factory_registry: List[Hook] = Factory(list)
     _call_cache: Callable = field(
         init=False,
@@ -195,6 +201,14 @@ class Incanter:
         factory: Callable,
         is_ctx_manager: Optional[CtxManagerKind] = None,
     ) -> None:
+        """Register a hook to be used for function composition.
+
+        :param predicate: A predicate function, should return `True` if this hook
+            should be used to fulfill a function parameter.
+        :param factory: The function that will be called to fulfil a function
+            parameter.
+        :param is_ctx_manager: Is the `factory` a context manager?
+        """
         self.register_hook_factory(predicate, lambda _: factory, is_ctx_manager)
 
     def register_hook_factory(

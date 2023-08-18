@@ -1,11 +1,11 @@
 # Tutorial
 
 This section contains a long, narrative-style guide to _incant_.
-See the Usage section with a more focused description of the library API.
+See the [Usage section](usage.md) with a more focused description of the library API.
 
 Let's demonstrate the use of _incant_ with a number of hypothetical scenarios.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
-You don't have to do it from scratch though, so you choose (essentially at random) an existing framework: [Quart](http://pgjones.gitlab.io/quart/) (Quart is an async version of Flask).
+You don't have to do it from scratch though, so you choose (essentially at random) an existing framework - [Quart](http://pgjones.gitlab.io/quart/) (Quart is an async version of Flask).
 Pretty much any other framework (sync or async) would have also worked; other implementations are left as an exercise to the reader.
 You decide to call this framework `QuickAPI`.
 
