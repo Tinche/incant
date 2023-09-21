@@ -315,6 +315,9 @@ def _is_constant_factory(invocation: Invocation) -> bool:
     """
     Is the given callable a factory of constants, and can be replaced with its result?
     """
+    if iscoroutinefunction(invocation.factory):
+        # We cannot run coroutines to get their constants.
+        return False
     if invocation.args:
         # If there are args, it's not constant for sure.
         return False
