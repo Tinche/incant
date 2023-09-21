@@ -2,7 +2,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from inspect import Parameter, getsource, signature
 from sys import version_info
-from time import time, sleep
+from time import sleep, time
 
 import pytest
 
