@@ -21,8 +21,8 @@ from ._codegen import (
     CtxManagerKind,
     Invocation,
     ParameterDep,
+    compile_compose,
     compile_incant_wrapper,
-    compile_invoke,
 )
 from ._compat import NO_OVERRIDE, Override, get_annotated_override, signature
 
@@ -115,13 +115,13 @@ class Incanter:
         )
 
     def call(self, fn: Callable[..., R], *args, **kwargs) -> R:
-        """Prepare `fn` and call it with the given parameters."""
+        """Compose `fn` and call it with the given parameters."""
         return self.compose(fn, is_async=False)(*args, **kwargs)
 
     invoke = call
 
     async def acall(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
-        """Prepare `fn` as async and call it with the given parameters."""
+        """Compose `fn` as async and call it with the given parameters."""
         return await self.compose(fn, is_async=True)(*args, **kwargs)
 
     ainvoke = acall
@@ -445,7 +445,7 @@ class Incanter:
                 fn_factory_args.append(dep.arg_name)
                 fn_factories.append(dep.factory)
 
-        return compile_invoke(
+        return compile_compose(
             fn,
             fn_factories,
             fn_factory_args,

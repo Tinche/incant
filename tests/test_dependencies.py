@@ -1,7 +1,8 @@
 from collections import OrderedDict
 from contextlib import contextmanager
-from inspect import Parameter, signature
+from inspect import Parameter, getsource, signature
 from sys import version_info
+from time import time, sleep
 
 import pytest
 
@@ -325,3 +326,58 @@ def test_new_unions(incanter: Incanter) -> None:
     assert prepared is not func
 
     assert prepared("1") == 2
+
+
+def test_constants(incanter: Incanter) -> None:
+    """Constant deps work."""
+
+    val = 1
+
+    incanter.register_by_name(lambda: val, name="my_int")
+
+    def func(my_int: int) -> int:
+        return my_int
+
+    prepared = incanter.compose(func)
+
+    assert (
+        getsource(prepared)
+        == "def invoke_func() -> int:  return func(_incant_constant_0)"
+    )
+
+    assert prepared() == val
+
+
+def test_reused_constants(incanter: Incanter) -> None:
+    """Constants that are used multiple times work."""
+    val = 1
+
+    incanter.register_by_name(lambda: val, name="my_int")
+
+    @incanter.register_by_name
+    def dependency(my_int: int) -> int:
+        return my_int + 1
+
+    def func(my_int: int, dependency: int) -> int:
+        return my_int + dependency
+
+    prepared = incanter.compose(func)
+
+    assert (
+        getsource(prepared)
+        == "def invoke_func() -> int:  return func(_incant_constant_0, dependency(_incant_constant_0))"
+    )
+
+    assert prepared() == 3
+
+
+def test_time_not_constant(incanter: Incanter) -> None:
+    """`time.time()` isn't treated as a constant."""
+
+    incanter.register_by_name(lambda: time(), name="time")
+
+    first = incanter.call(lambda time: time)
+    sleep(0.1)
+    second = incanter.call(lambda time: time)
+
+    assert first != second

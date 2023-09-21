@@ -13,6 +13,7 @@ The **third number** is when we need to start branches for older releases (only 
 - `Incanter.prepare()` has been renamed to {py:meth}`Incanter.compose() <incant.Incanter.compose>` for clarity.
   `Incanter.prepare()` is still present as an alias for backwards compatibility.
 - Introduce {py:meth}`Incanter.prepare_for_incant <incant.Incanter.prepare_for_incant>`.
+- Dependency factories of constants (`lambda: 1`) are now folded to just the constants in the generated source code, avoiding unnecessary function calls.
 
 ## 23.1.0 (2023-07-14)
 
