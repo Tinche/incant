@@ -12,6 +12,6 @@ def test_params_with_defaults():
 
     assert incant.call(fn) == 1
 
-    assert signature(incant.prepare(fn)) == Signature(
+    assert signature(incant.compose(fn)) == Signature(
         [Parameter("default_param", Parameter.POSITIONAL_OR_KEYWORD, default=1)]
     )

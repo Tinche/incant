@@ -171,7 +171,7 @@ Since _incant_ doesn't itself call `invoke`, you prepare it yourself beforehand.
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(handler)
+    prepared = incanter.compose(handler)
 
     @wraps(handler)
     async def wrapper(**kwargs):
@@ -283,7 +283,7 @@ We change the `quickapi` decorator thusly:
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(handler, forced_deps=[(apply_timeout, "sync")])
+    prepared = incanter.compose(handler, forced_deps=[(apply_timeout, "sync")])
 
     @wraps(handler)
     async def wrapper(**kwargs):

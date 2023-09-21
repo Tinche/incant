@@ -95,14 +95,14 @@ class Incanter:
         ),
     )
 
-    def prepare(
+    def compose(
         self,
         fn: Callable[..., R],
         hooks: Sequence[Hook] = (),
         is_async: Optional[bool] = None,
         forced_deps: Sequence[Union[Callable, Tuple[Callable, CtxManagerKind]]] = (),
     ) -> Callable[..., R]:
-        """Prepare a new function, encapsulating satisfied dependencies.
+        """Compose `fn` with its satisfied dependencies, potentially creating a new function.
 
         :param forced_deps: A sequence of dependencies that will be used even if `fn`
             doesn't require them explicitly.
@@ -116,13 +116,13 @@ class Incanter:
 
     def call(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Prepare `fn` and call it with the given parameters."""
-        return self.prepare(fn, is_async=False)(*args, **kwargs)
+        return self.compose(fn, is_async=False)(*args, **kwargs)
 
     invoke = call
 
     async def acall(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         """Prepare `fn` as async and call it with the given parameters."""
-        return await self.prepare(fn, is_async=True)(*args, **kwargs)
+        return await self.compose(fn, is_async=True)(*args, **kwargs)
 
     ainvoke = acall
 

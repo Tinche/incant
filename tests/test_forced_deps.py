@@ -13,7 +13,7 @@ def test_noarg_forced_dep(incanter: Incanter):
         return 1
 
     with pytest.raises(ValueError):
-        prep = incanter.prepare(fn, forced_deps=(forced_dep,))
+        prep = incanter.compose(fn, forced_deps=(forced_dep,))
         prep()
 
 
@@ -28,7 +28,7 @@ def test_simple_arg_forced_dep(incanter: Incanter):
         return 1
 
     with pytest.raises(ValueError):
-        prep = incanter.prepare(fn, forced_deps=(forced_dep,))
+        prep = incanter.compose(fn, forced_deps=(forced_dep,))
         prep(val)
 
 
@@ -43,7 +43,7 @@ def test_complex_arg_forced_dep(incanter: Incanter):
         assert f == val_f
         return 1
 
-    prep = incanter.prepare(fn, forced_deps=(forced_dep,))
+    prep = incanter.compose(fn, forced_deps=(forced_dep,))
     assert prep(val, val_f) == 1
 
 
@@ -57,7 +57,7 @@ def test_shared_args(incanter: Incanter):
         assert i == val
         return 1
 
-    prep = incanter.prepare(fn, forced_deps=(forced_dep,))
+    prep = incanter.compose(fn, forced_deps=(forced_dep,))
     assert prep(val) == 1
 
 
@@ -75,7 +75,7 @@ def test_shared_dep(incanter: Incanter):
     def dep() -> int:
         return val
 
-    prep = incanter.prepare(fn, forced_deps=(forced_dep,))
+    prep = incanter.compose(fn, forced_deps=(forced_dep,))
     assert prep() == 1
 
 
@@ -103,7 +103,7 @@ async def test_async_ctx_mgr_dep(incanter: Incanter):
         assert not after
         after = True
 
-    prep = incanter.prepare(
+    prep = incanter.compose(
         fn, is_async=True, forced_deps=((my_async_context_mgr, "async"),)
     )
     assert await prep(5) == 1
@@ -135,7 +135,7 @@ async def test_async_ctx_mgr_with_param(incanter: Incanter):
         assert not after
         after = True
 
-    prep = incanter.prepare(
+    prep = incanter.compose(
         fn, is_async=True, forced_deps=((my_async_context_mgr, "async"),)
     )
     assert await prep(10.0, 5) == 1
@@ -173,5 +173,5 @@ async def test_async_ctx_mgr_with_shared_param_and_dep(incanter: Incanter):
         assert not after
         after = True
 
-    prep = incanter.prepare(fn, forced_deps=((my_async_context_mgr, "async"),))
+    prep = incanter.compose(fn, forced_deps=((my_async_context_mgr, "async"),))
     assert await prep(10.0) == 1

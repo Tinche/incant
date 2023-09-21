@@ -16,15 +16,15 @@ def test_simple_dep(incanter: Incanter):
 
     with pytest.raises(TypeError):
         incanter.call(func)
-    assert signature(incanter.prepare(func)).parameters == {
+    assert signature(incanter.compose(func)).parameters == {
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
     }
 
     incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
     assert incanter.call(func) == 3
 
-    assert signature(incanter.prepare(func)).parameters == {}
-    assert signature(incanter.prepare(func)).return_annotation is int
+    assert signature(incanter.compose(func)).parameters == {}
+    assert signature(incanter.compose(func)).return_annotation is int
 
 
 def test_nested_deps(incanter: Incanter):
@@ -34,7 +34,7 @@ def test_nested_deps(incanter: Incanter):
     def func(dep1):
         return dep1 + 1
 
-    assert signature(incanter.prepare(func)).parameters == {}
+    assert signature(incanter.compose(func)).parameters == {}
     assert incanter.call(func) == 4
 
 
@@ -47,7 +47,7 @@ def test_nested_partial_deps(incanter: Incanter):
     def func(dep1):
         return dep1 + 1
 
-    assert signature(incanter.prepare(func)).parameters == {
+    assert signature(incanter.compose(func)).parameters == {
         "input": Parameter("input", Parameter.POSITIONAL_OR_KEYWORD)
     }
     assert incanter.call(func, 1) == 5
@@ -62,7 +62,7 @@ def test_nested_partial_deps_with_args(incanter: Incanter):
     def func(dep1, input2: float) -> float:
         return dep1 + 1 + input2
 
-    assert signature(incanter.prepare(func)).parameters == OrderedDict(
+    assert signature(incanter.compose(func)).parameters == OrderedDict(
         [
             ("input", Parameter("input", Parameter.POSITIONAL_OR_KEYWORD)),
             (
@@ -92,7 +92,7 @@ def test_shared_params(incanter: Incanter):
     def func(dep1, input: float) -> float:
         return dep1 + 1 + input
 
-    assert signature(incanter.prepare(func)).parameters == OrderedDict(
+    assert signature(incanter.compose(func)).parameters == OrderedDict(
         [
             (
                 "input",
@@ -115,7 +115,7 @@ def test_shared_deps_type_from_dep(incanter: Incanter):
     def func(dep1, input) -> float:
         return dep1 + 1 + input
 
-    assert signature(incanter.prepare(func)).parameters == OrderedDict(
+    assert signature(incanter.compose(func)).parameters == OrderedDict(
         [
             (
                 "input",
@@ -139,7 +139,7 @@ def test_shared_deps_incompatible(incanter: Incanter):
         return dep1 + 1 + input
 
     with pytest.raises(IncantError):
-        incanter.prepare(func)
+        incanter.compose(func)
 
     with pytest.raises(IncantError):
         incanter.call(func, 5.0)
@@ -153,7 +153,7 @@ def test_class_deps(incanter: Incanter):
     incanter.register_hook(lambda p: p.name == "dep", Dep)
     assert incanter.call(lambda dep: dep.a + 1, a=1)
 
-    assert signature(incanter.prepare(lambda dep: dep.a + 1)).parameters == OrderedDict(
+    assert signature(incanter.compose(lambda dep: dep.a + 1)).parameters == OrderedDict(
         [
             (
                 "a",
@@ -182,7 +182,7 @@ def test_optional_arg(incanter: Incanter):
 
     assert incanter.call(lambda dep: dep + 1) == 2
     assert incanter.call(lambda dep: dep + 1, 2) == 3
-    assert signature(incanter.prepare(lambda dep: dep + 1)).parameters == {
+    assert signature(incanter.compose(lambda dep: dep + 1)).parameters == {
         "i": Parameter("i", Parameter.POSITIONAL_OR_KEYWORD, default=1)
     }
 
@@ -261,7 +261,7 @@ def test_forced_ctx_manager_dep(incanter: Incanter):
         assert entered
         return i + 1
 
-    assert incanter.prepare(fn, forced_deps=[(dep1, "sync")])(1) == 2
+    assert incanter.compose(fn, forced_deps=[(dep1, "sync")])(1) == 2
 
     assert entered
     assert exited
@@ -288,7 +288,7 @@ def test_parameter_name_overwriting(incanter: Incanter) -> None:
     def func(an_int: int) -> int:
         return an_int + 1
 
-    assert signature(incanter.prepare(func)).parameters == {
+    assert signature(incanter.compose(func)).parameters == {
         "an_int": Parameter("an_int", Parameter.POSITIONAL_OR_KEYWORD, annotation=int)
     }
 
@@ -299,7 +299,7 @@ def test_parameter_name_overwriting(incanter: Incanter) -> None:
 
     assert incanter.call(func, 1) == 2
 
-    assert signature(incanter.prepare(func)).parameters == {
+    assert signature(incanter.compose(func)).parameters == {
         "another_int": Parameter(
             "another_int", Parameter.POSITIONAL_OR_KEYWORD, annotation=int
         )
@@ -319,7 +319,7 @@ def test_new_unions(incanter: Incanter) -> None:
     def func(an_int: int | str, provide_int: int) -> int:
         return int(an_int) + provide_int
 
-    prepared = incanter.prepare(func)
+    prepared = incanter.compose(func)
 
     # Be careful we don't accidentally optimize this away.
     assert prepared is not func

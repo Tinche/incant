@@ -21,15 +21,15 @@ def test_simple_prepare(incanter: Incanter):
 
     with pytest.raises(TypeError):
         incanter.call(func)
-    assert signature(incanter.prepare(func)).parameters == {
+    assert signature(incanter.compose(func)).parameters == {
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
     }
 
     incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
     assert incanter.call(func) == 3
 
-    assert signature(incanter.prepare(func)).parameters == {}
-    assert signature(incanter.prepare(func)).return_annotation is int
+    assert signature(incanter.compose(func)).parameters == {}
+    assert signature(incanter.compose(func)).return_annotation is int
 
 
 def test_reg_by_type(incanter: Incanter):

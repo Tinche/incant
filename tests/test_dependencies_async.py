@@ -28,7 +28,7 @@ async def test_async_dep(incanter: Incanter):
 
     assert (await incanter.acall(lambda dep1: dep1 + 1)) == 2
     assert signature(
-        incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
+        incanter.compose(lambda dep1: dep1 + 1, is_async=True)
     ).parameters == OrderedDict([])
 
 
@@ -44,7 +44,7 @@ async def test_async_dep_invoke(incanter: Incanter):
 
     assert (await incanter.ainvoke(lambda dep1: dep1 + 1)) == 2
     assert signature(
-        incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
+        incanter.compose(lambda dep1: dep1 + 1, is_async=True)
     ).parameters == OrderedDict([])
 
 
@@ -62,7 +62,7 @@ async def test_async_mixed_dep(incanter: Incanter):
 
     assert (await incanter.acall(lambda dep1: dep1 + 1, 1)) == 4
     assert signature(
-        incanter.prepare(lambda dep1: dep1 + 1, is_async=True)
+        incanter.compose(lambda dep1: dep1 + 1, is_async=True)
     ).parameters == OrderedDict(
         [("input", Parameter("input", Parameter.POSITIONAL_OR_KEYWORD, annotation=int))]
     )
@@ -107,4 +107,4 @@ def test_async_invoke_return_type(incanter: Incanter):
     async def fn() -> int:
         return 2
 
-    assert signature(incanter.prepare(fn)).return_annotation is int
+    assert signature(incanter.compose(fn)).return_annotation is int

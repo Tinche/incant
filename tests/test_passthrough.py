@@ -7,7 +7,7 @@ def test_no_deps(incanter: Incanter) -> None:
     def func() -> int:
         return 1
 
-    assert incanter.prepare(func) == func
+    assert incanter.compose(func) == func
 
 
 def test_some_deps(incanter: Incanter) -> None:
@@ -16,7 +16,7 @@ def test_some_deps(incanter: Incanter) -> None:
     def func(x: int) -> int:
         return x + 1
 
-    assert incanter.prepare(func) == func
+    assert incanter.compose(func) == func
 
 
 def test_forced_deps(incanter: Incanter) -> None:
@@ -31,7 +31,7 @@ def test_forced_deps(incanter: Incanter) -> None:
     def dep1() -> None:
         return
 
-    assert incanter.prepare(func, forced_deps=[dep1]) is not func
+    assert incanter.compose(func, forced_deps=[dep1]) is not func
 
 
 def test_async_mismatch(incanter: Incanter) -> None:
@@ -42,7 +42,7 @@ def test_async_mismatch(incanter: Incanter) -> None:
     def func(x: int) -> int:
         return x + 1
 
-    assert incanter.prepare(func, is_async=True) is not func
+    assert incanter.compose(func, is_async=True) is not func
 
     # The other way (adapting an async function into a sync one) is not possible.
 
@@ -55,4 +55,4 @@ def test_explicit_sync(incanter: Incanter) -> None:
     def func(x: int) -> int:
         return x + 1
 
-    assert incanter.prepare(func, is_async=False) is func
+    assert incanter.compose(func, is_async=False) is func

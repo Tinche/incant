@@ -82,7 +82,7 @@ incanter.register_hook_factory(
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(
+    prepared = incanter.compose(
         handler, is_async=True, forced_deps=[(apply_timeout, "sync")]
     )
 
