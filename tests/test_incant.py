@@ -84,12 +84,12 @@ def test_kwargs_subclasses(incanter: Incanter) -> None:
     assert incanter.incant(func, x=SubInt(2)) == 3
 
 
-def test_incant_prepare(incanter: Incanter):
-    """Simple cases of prepare_incant work."""
+def test_adapt(incanter: Incanter):
+    """Simple cases of adapt work."""
 
     def func(x: Literal[0]) -> int:
         return x + 1
 
-    prepped = incanter.prepare_for_incant(func, lambda p: p.annotation == Literal[0])
+    adapted = incanter.adapt(func, lambda p: p.annotation == Literal[0])
 
-    assert prepped(1) == 2
+    assert adapted(1) == 2

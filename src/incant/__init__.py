@@ -134,10 +134,10 @@ class Incanter:
         """Invoke async `fn` the best way we can."""
         return await self._incant(fn, args, kwargs)
 
-    def prepare_for_incant(
+    def adapt(
         self, fn: Callable[..., R], *args: PredicateFn, **kwargs: PredicateFn
     ) -> Callable[..., R]:
-        """Prepare `fn` for incantation.
+        """Adapt `fn` for incantation.
 
         Args and kwargs shape the signature of the produced function.
         """
