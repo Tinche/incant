@@ -8,7 +8,7 @@ The **third number** is when we need to start branches for older releases (only 
 
 ## 23.2.0 (UNRELEASED)
 
-- `Incanter.(a)invoke()` has been renamed to {py:meth}`Incanter.(a)call() <incant.Incanter.call>` for clarity.
+- `Incanter.(a)invoke()` has been renamed to {py:meth}`Incanter.(a)compose_and_call() <incant.Incanter.compose_and_call>` for clarity.
   `Incanter.(a)invoke()` is still present as an alias for backwards compatibility.
 - `Incanter.prepare()` has been renamed to {py:meth}`Incanter.compose() <incant.Incanter.compose>` for clarity.
   `Incanter.prepare()` is still present as an alias for backwards compatibility.

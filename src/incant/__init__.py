@@ -114,17 +114,19 @@ class Incanter:
             tuple(f if isinstance(f, tuple) else (f, None) for f in forced_deps),
         )
 
-    def call(self, fn: Callable[..., R], *args, **kwargs) -> R:
+    def compose_and_call(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Compose `fn` and call it with the given parameters."""
         return self.compose(fn, is_async=False)(*args, **kwargs)
 
-    invoke = call
+    invoke = compose_and_call
 
-    async def acall(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
+    async def acompose_and_call(
+        self, fn: Callable[..., Awaitable[R]], *args, **kwargs
+    ) -> R:
         """Compose `fn` as async and call it with the given parameters."""
         return await self.compose(fn, is_async=True)(*args, **kwargs)
 
-    ainvoke = acall
+    ainvoke = acompose_and_call
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""

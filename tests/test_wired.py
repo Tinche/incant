@@ -6,7 +6,7 @@ to prove feature parity.
 from collections import defaultdict
 from typing import List
 
-from attr import Factory, define
+from attrs import Factory, define
 
 from incant import Incanter
 
@@ -27,7 +27,7 @@ def test_greeter(incanter: Incanter):
     def greet_a_customer(greeter: Greeter) -> str:
         return greeter()
 
-    assert incanter.call(greet_a_customer) == "Hello !!"
+    assert incanter.compose_and_call(greet_a_customer) == "Hello !!"
 
 
 def test_greeter_factory(incanter: Incanter):
@@ -47,7 +47,7 @@ def test_greeter_factory(incanter: Incanter):
     def greet_a_customer(greeter: Greeter) -> str:
         return greeter()
 
-    assert incanter.call(greet_a_customer) == "Hello !!"
+    assert incanter.compose_and_call(greet_a_customer) == "Hello !!"
 
 
 def test_greeter_settings() -> None:
@@ -80,7 +80,7 @@ def test_greeter_settings() -> None:
 
     settings = Settings(punctuation="!!")
     incanter = setup(settings)
-    assert incanter.call(greet_a_customer) == "Hello !!"
+    assert incanter.compose_and_call(greet_a_customer) == "Hello !!"
 
 
 def test_greeter_settings_idiomatic(incanter: Incanter):
@@ -107,7 +107,7 @@ def test_greeter_settings_idiomatic(incanter: Incanter):
 
     incanter.register_hook(lambda p: p.name == "punctuation", lambda: "!!")
 
-    assert incanter.call(greet_a_customer) == "Hello !!"
+    assert incanter.compose_and_call(greet_a_customer) == "Hello !!"
 
 
 def test_greeter_contexts(incanter: Incanter):
@@ -150,8 +150,11 @@ def test_greeter_contexts(incanter: Incanter):
     customer = Customer(name="Mary")
     french_customer = FrenchCustomer(name="Henri")
 
-    assert incanter.call(greet_a_customer, customer) == "Hello Mary !!"
-    assert incanter.call(greet_a_customer, french_customer) == "Bonjour Henri !!"
+    assert incanter.compose_and_call(greet_a_customer, customer) == "Hello Mary !!"
+    assert (
+        incanter.compose_and_call(greet_a_customer, french_customer)
+        == "Bonjour Henri !!"
+    )
 
 
 def test_greeter_decoupled(incanter: Incanter):
@@ -183,7 +186,7 @@ def test_greeter_decoupled(incanter: Incanter):
         return greeter(customer)
 
     customer = Customer(name="Mary")
-    assert incanter.call(greet_a_customer, customer) == "Hello Mary !!"
+    assert incanter.compose_and_call(greet_a_customer, customer) == "Hello Mary !!"
 
     # The second part of the app:
     @define
@@ -200,7 +203,10 @@ def test_greeter_decoupled(incanter: Incanter):
     customer_types_to_greeters[FrenchCustomer] = FrenchGreeter
 
     french_customer = FrenchCustomer(name="Henri")
-    assert incanter.call(greet_a_customer, french_customer) == "Bonjour Henri !!"
+    assert (
+        incanter.compose_and_call(greet_a_customer, french_customer)
+        == "Bonjour Henri !!"
+    )
 
 
 def test_greeter_datastore(incanter: Incanter):
@@ -260,7 +266,7 @@ def test_greeter_datastore(incanter: Incanter):
     def add_to_datastore(datastore: Datastore):
         datastore.customers.append(french_customer)
 
-    incanter.call(add_to_datastore)
+    incanter.compose_and_call(add_to_datastore)
 
     def sample_interactions(incanter: Incanter) -> List[str]:
         """Pretend to do a couple of customer interactions"""
@@ -270,10 +276,10 @@ def test_greeter_datastore(incanter: Incanter):
         def get_customers(datastore: Datastore) -> List[Customer]:
             return list(datastore.customers)
 
-        customers = incanter.call(get_customers)
+        customers = incanter.compose_and_call(get_customers)
 
         for customer in customers:
-            greeting = incanter.call(customer_interaction, customer)
+            greeting = incanter.compose_and_call(customer_interaction, customer)
             greetings.append(greeting)
 
         return greetings
