@@ -21,8 +21,8 @@ from ._codegen import (
     CtxManagerKind,
     Invocation,
     ParameterDep,
+    compile_compose,
     compile_incant_wrapper,
-    compile_invoke,
 )
 from ._compat import NO_OVERRIDE, Override, get_annotated_override, signature
 
@@ -63,11 +63,11 @@ class Hook:
     factory: Optional[Tuple[Callable[[Parameter], Callable], Optional[CtxManagerKind]]]
 
     @classmethod
-    def for_name(cls, name: str, hook: Optional[Callable]):
+    def for_name(cls, name: str, hook: Optional[Callable]) -> "Hook":
         return cls(lambda p: p.name == name, None if hook is None else (lambda _: hook, None))  # type: ignore
 
     @classmethod
-    def for_type(cls, type: Any, hook: Optional[Callable]):
+    def for_type(cls, type: Any, hook: Optional[Callable]) -> "Hook":
         """Register by exact type (subclasses won't match)."""
         return cls(
             lambda p: p.annotation == type,
@@ -77,12 +77,16 @@ class Hook:
 
 @define
 class Incanter:
+    """A registry of _hooks_, used for function composition.
+
+    Hooks use predicate functions to define rules of how they bind to function
+    arguments.
+    """
+
     hook_factory_registry: List[Hook] = Factory(list)
-    _invoke_cache: Callable = field(
+    _call_cache: Callable = field(
         init=False,
-        default=Factory(
-            lambda self: lru_cache(None)(self._gen_invoke), takes_self=True
-        ),
+        default=Factory(lambda self: lru_cache(None)(self._gen_call), takes_self=True),
     )
     _incant_cache: Callable = field(
         init=False,
@@ -91,29 +95,38 @@ class Incanter:
         ),
     )
 
-    def prepare(
+    def compose(
         self,
         fn: Callable[..., R],
         hooks: Sequence[Hook] = (),
         is_async: Optional[bool] = None,
         forced_deps: Sequence[Union[Callable, Tuple[Callable, CtxManagerKind]]] = (),
     ) -> Callable[..., R]:
-        """Prepare a new function, encapsulating satisfied dependencies.
+        """Compose `fn` with its satisfied dependencies, potentially creating a new function.
 
-        forced_deps: A sequence of dependencies that will be called even if `fn` doesn't require them explicitly.
+        :param forced_deps: A sequence of dependencies that will be used even if `fn`
+            doesn't require them explicitly.
         """
-        return self._invoke_cache(
+        return self._call_cache(
             fn,
             tuple(hooks),
             is_async,
             tuple(f if isinstance(f, tuple) else (f, None) for f in forced_deps),
         )
 
-    def invoke(self, fn: Callable[..., R], *args, **kwargs) -> R:
-        return self.prepare(fn, is_async=False)(*args, **kwargs)
+    def compose_and_call(self, fn: Callable[..., R], *args, **kwargs) -> R:
+        """Compose `fn` and call it with the given parameters."""
+        return self.compose(fn, is_async=False)(*args, **kwargs)
 
-    async def ainvoke(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
-        return await self.prepare(fn, is_async=True)(*args, **kwargs)
+    invoke = compose_and_call
+
+    async def acompose_and_call(
+        self, fn: Callable[..., Awaitable[R]], *args, **kwargs
+    ) -> R:
+        """Compose `fn` as async and call it with the given parameters."""
+        return await self.compose(fn, is_async=True)(*args, **kwargs)
+
+    ainvoke = acompose_and_call
 
     def incant(self, fn: Callable[..., R], *args, **kwargs) -> R:
         """Invoke `fn` the best way we can."""
@@ -121,7 +134,18 @@ class Incanter:
 
     async def aincant(self, fn: Callable[..., Awaitable[R]], *args, **kwargs) -> R:
         """Invoke async `fn` the best way we can."""
-        return await self._incant(fn, args, kwargs, is_async=True)
+        return await self._incant(fn, args, kwargs)
+
+    def adapt(
+        self, fn: Callable[..., R], *args: PredicateFn, **kwargs: PredicateFn
+    ) -> Callable[..., R]:
+        """Adapt `fn` for incantation.
+
+        Args and kwargs shape the signature of the produced function.
+        """
+        return self._incant_cache(
+            fn, args, frozenset((k, v) for k, v in kwargs.items())
+        )
 
     def register_by_name(
         self,
@@ -169,7 +193,10 @@ class Incanter:
         else:
             type_to_reg = type
         self.register_hook(
-            lambda p: is_subclass(p.annotation, type_to_reg), fn, is_ctx_manager
+            lambda p: p.annotation == type_to_reg
+            or is_subclass(p.annotation, type_to_reg),
+            fn,
+            is_ctx_manager,
         )
         return fn
 
@@ -179,6 +206,14 @@ class Incanter:
         factory: Callable,
         is_ctx_manager: Optional[CtxManagerKind] = None,
     ) -> None:
+        """Register a hook to be used for function composition.
+
+        :param predicate: A predicate function, should return `True` if this hook
+            should be used to fulfill a function parameter.
+        :param factory: The function that will be called to fulfil a function
+            parameter.
+        :param is_ctx_manager: Is the `factory` a context manager?
+        """
         self.register_hook_factory(predicate, lambda _: factory, is_ctx_manager)
 
     def register_hook_factory(
@@ -190,7 +225,7 @@ class Incanter:
         self.hook_factory_registry.insert(
             0, Hook(predicate, (hook_factory, is_ctx_manager))
         )
-        self._invoke_cache.cache_clear()  # type: ignore
+        self._call_cache.cache_clear()  # type: ignore
         self._incant_cache.cache_clear()  # type: ignore
 
     def _incant(
@@ -198,48 +233,52 @@ class Incanter:
         fn: Callable,
         args: Tuple[Any, ...],
         kwargs: Dict[str, Any],
-        is_async: bool = False,
     ):
         """The shared entrypoint for ``incant`` and ``aincant``."""
 
-        pos_args_types = tuple([a.__class__ for a in args])
-        kwargs_by_name_and_type = frozenset(
-            [(k, v.__class__) for k, v in kwargs.items()]
+        pos_args = tuple(
+            lambda p, c=a.__class__: is_subclass(c, p.annotation) for a in args
         )
-        wrapper = self._incant_cache(
-            fn, pos_args_types, kwargs_by_name_and_type, is_async
+        kwargs_by_name_and_pred = frozenset(
+            [
+                (k, lambda p, c=v.__class__: is_subclass(c, p.annotation))
+                for k, v in kwargs.items()
+            ]
         )
+        wrapper = self._incant_cache(fn, pos_args, kwargs_by_name_and_pred)
 
         return wrapper(*args, **kwargs)
 
     def _gen_incant_plan(
-        self, fn, pos_args_types: Tuple[Any, ...], kwargs: Set[Tuple[str, Any]]
+        self,
+        fn: Callable,
+        pos_args: Tuple[PredicateFn, ...],
+        kwargs: Dict[str, PredicateFn],
     ) -> List[Union[int, str]]:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
         pos_arg_plan: List[Union[int, str]] = []
-        kwarg_names = {kw[0] for kw in kwargs}
         sig = signature(fn)
         for arg_name, arg in sig.parameters.items():
             found = False
-            if (
-                arg.annotation is not Signature.empty
-                and (arg_name, arg.annotation) in kwargs
-            ):
-                pos_arg_plan.append(arg_name)
-                found = True
+
+            for kwarg_pred in kwargs.values():
+                if kwarg_pred(arg):
+                    pos_arg_plan.append(arg_name)
+                    found = True
+                    break
             if found:
                 continue
 
             if arg.annotation is not Signature.empty:
-                for ix, a in enumerate(pos_args_types):
-                    if is_subclass(a, arg.annotation):
+                for ix, pred in enumerate(pos_args):
+                    if pred(arg):
                         pos_arg_plan.append(ix)
                         found = True
                         break
             if found:
                 continue
 
-            if arg_name in kwarg_names:
+            if arg_name in kwargs:
                 pos_arg_plan.append(arg_name)
             elif arg.default is not Signature.empty:
                 # An argument with a default we cannot fulfil is ok.
@@ -251,14 +290,11 @@ class Incanter:
     def _gen_incant(
         self,
         fn: Callable,
-        pos_args_types: Tuple,
-        kwargs_by_name_and_type: Set,
-        is_async: Optional[bool] = False,
+        pos_args: Tuple[PredicateFn, ...],
+        kwargs: Set[Tuple[str, PredicateFn]],
     ) -> Callable:
-        plan = self._gen_incant_plan(fn, pos_args_types, kwargs_by_name_and_type)
-        return compile_incant_wrapper(
-            fn, plan, len(pos_args_types), len(kwargs_by_name_and_type)
-        )
+        plan = self._gen_incant_plan(fn, pos_args, dict(kwargs))
+        return compile_incant_wrapper(fn, plan, len(pos_args), len(kwargs))
 
     def _gen_dep_tree(
         self,
@@ -321,7 +357,7 @@ class Incanter:
         dep_nodes.append(final_nodes[-1])
         return dep_nodes
 
-    def _gen_invoke(
+    def _gen_call(
         self,
         fn: Callable,
         hooks: Tuple[Hook, ...] = (),
@@ -414,7 +450,7 @@ class Incanter:
                 fn_factory_args.append(dep.arg_name)
                 fn_factories.append(dep.factory)
 
-        return compile_invoke(
+        return compile_compose(
             fn,
             fn_factories,
             fn_factory_args,

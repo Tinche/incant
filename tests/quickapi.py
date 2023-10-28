@@ -58,6 +58,7 @@ class User:
 
 async def current_user(session_token: str) -> User:
     # Complex black magic goes here, immune to timing attacks.
+    assert session_token
     return User("admin")
 
 
@@ -81,7 +82,7 @@ incanter.register_hook_factory(
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(
+    prepared = incanter.compose(
         handler, is_async=True, forced_deps=[(apply_timeout, "sync")]
     )
 
@@ -150,6 +151,7 @@ async def taskgroup_handler(tg: TaskGroup, log: BoundLogger) -> str:
 @app.get("/header")
 @quickapi
 async def a_header_handler(content_type: Header = Header("none"), log=logger) -> str:
+    log.info("Called")
     return f"The header was: {content_type}"
 
 

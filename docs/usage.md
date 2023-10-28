@@ -1,8 +1,18 @@
 # Usage
 
-This section contains a quick usage guide to _incant_.
+This section contains a quick usage guide to both aspects of _incant_.
+_incant_ functionality broadly falls in two categories, called the _convenience layer_ and the _power layer_.
+The _convenience layer_ functionality will let you get started quickly and elegantly, while the _power layer_ will unlock the most customizability and performance.
 
-State (in the form of dependency factories) is kept in an instance of {class}`incant.Incanter`.
+## Function Composition
+
+Function composition is the act of combining functions in various ways.
+Dependency injection is a very common example of function composition, and applying decorators to functions in Python is another.
+
+In _incant_, you define rules which determine how _incant_ chooses which functions to use for compositions.
+These rules are then applied to a function, producing another function which encapsulates the given function and all its dependent functions (called dependencies).
+
+This state (in the form of dependency factories) is kept in an instance of {class}`incant.Incanter`.
 
 ```python
 from incant import Incanter
@@ -10,18 +20,18 @@ from incant import Incanter
 incanter = Incanter()
 ```
 
-The `incanter` can now be used to call functions ({meth}`incant.Incanter.invoke`) and coroutines ({meth}`incant.Incanter.ainvoke`).
-Since there are no dependency factories registered yet, `incanter.invoke(fn, a, b, c)` is equivalent to `fn(a, b, c)`.
+The `incanter` can now be used to compose and call functions ({meth}`incant.Incanter.compose_and_call`) and coroutines ({meth}`incant.Incanter.acompose_and_call`).
+Since there are no rules (dependency factories) registered yet, `incanter.compose_and_call(fn, a, b, c)` does nothing and is exactly equivalent to `fn(a, b, c)`.
 
 ```python
 def my_function(my_argument):
     print(f"Called with {my_argument}")
 
-incanter.invoke(my_function, 1)
+incanter.compose_and_call(my_function, 1)  # Equivalent to my_function(1)
 'Called with 1'
 ```
 
-The simplest way to register a dependency factory is by name:
+The simplest way to create a rule (or: _register a dependency factory_) is by name:
 
 ```python
 @incanter.register_by_name
@@ -29,11 +39,21 @@ def my_argument():
     return 2
 ```
 
-The result of this dependency factory will be substituted when we invoke a function that has an argument named `my_argument`.
+This is a convenient way of making _incant_ substitute any argument named `my_argument` with the result of the `my_argument` dependency factory.
+Now we don't need to pass in the argument, _incant_ will generate a new function under the hood doing the wiring for us.
 
 ```python
-incanter.invoke(my_function)
+incanter.compose_and_call(my_function)
 'Called with 2'
+```
+
+This is equivalent to the following code:
+
+```python
+def my_function_composed():
+    return my_function(my_argument())
+
+my_function_composed()
 ```
 
 Another simple way to register a dependency factory is by its return type:
@@ -46,18 +66,22 @@ def another_factory(my_argument) -> int:
 def another_function(takes_int: int):
     print(f"Called with {takes_int}")
 
-incanter.invoke(another_function)
+incanter.compose_and_call(another_function)
 'Called with 3'
+```
+
+```{note}
+{meth}`incant.Incanter.compose_and_call`, {meth}`incant.Incanter.acompose_and_call`, {meth}`incant.Incanter.register_by_name` and {meth}`incant.Incanter.register_by_type` are part of the _convenience layer_.
 ```
 
 Dependency factories may themselves have dependencies provided to them, as shown in the above example.
 _incant_ performs a depth-first pass of gathering nested dependencies.
 
-`Incanter.invoke()` uses {meth}`Incanter.prepare() <incant.Incanter.prepare>` internally.
-`prepare()` does the actual heavy lifting of creating and caching a wrapper with the dependencies processed and wired.
+{meth}`Incanter.compose_and_call() <incant.Incanter.compose_and_call>` uses {meth}`Incanter.compose() <incant.Incanter.compose>` internally.
+`compose()` does the actual heavy lifting of creating and caching a wrapper with the dependencies processed and composed.
 It's useful for getting the wrappers for caching or inspection - the wrappers support ordinary Python introspection using the standard library [`inspect`](https://docs.python.org/3/library/inspect.html) module.
 
-`prepare()` also allows customizing the wrapper without adding hooks to the actual `Incanter`.
+`compose()` also allows customizing the wrapper without adding hooks to the actual `Incanter`.
 
 ```python
 from incant import Hook
@@ -69,13 +93,13 @@ def my_argument():
 def my_function(my_argument):
     print(f"Called with {my_argument}")
 
->>> incanter.invoke(my_function)
+>>> incanter.compose_and_call(my_function)
 2
 
->>> incanter.prepare(lambda: my_argument)()  # Equivalent.
+>>> incanter.compose(lambda: my_argument)()  # Equivalent.
 2
 
->>> incanter.prepare(lambda: my_argument, [Hook.for_name("my_argument", lambda: 1)])()
+>>> incanter.compose(lambda: my_argument, [Hook.for_name("my_argument", lambda: 1)])()
 1
 ```
 
@@ -84,17 +108,26 @@ Also be aware that since in Python lambdas don't play well with caching, if you'
 
 ```python
 # Inefficient:
->>> incanter.prepare(lambda: my_argument, [Hook.for_name("my_argument", lambda: 1)])()
+>>> incanter.compose(lambda: my_argument, [Hook.for_name("my_argument", lambda: 1)])()
 
 # Efficient:
 >>> additional_hooks = [Hook.for_name("my_argument", lambda: 1)] # Store this and reuse it.
 
->>> incanter.prepare(lambda: my_argument, additional_hooks)()  # Now uses the cache.
+>>> incanter.compose(lambda: my_argument, additional_hooks)()  # Now uses the cache.
 ```
 
+```{note}
+{meth}`incant.Incanter.compose` is part of the _power layer_.
+```
+
+## Function Invocation
+
 Incanter instances also have helper methods, {meth}`Incanter.incant() <incant.Incanter.incant>` and {meth}`Incanter.aincant() <incant.Incanter.aincant>` that serve as a smart helper for calling functions.
-`Incanter.incant()` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
-`Incanter.incant()` also composes nicely with `prepare()`, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
+`incant()` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
+`incant()` also composes nicely with `compose()`, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
+
+{meth}`Incanter.incant() <incant.Incanter.incant>` uses {meth}`Incanter.adapt() <incant.Incanter.adapt>` internally.
+`adapt()` takes a function to be called and a series of predicates describing future parameters, and produces a function accepting these parameters and smartly forwarding them to the original function.
 
 `register_by_name` and `register_by_type` delegate to {meth}`Incanter.register_hook() <incant.Incanter.register_hook>`.
 `register_hook()` takes a predicate function and a dependency factory.

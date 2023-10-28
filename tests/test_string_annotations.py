@@ -20,16 +20,16 @@ def test_simple_prepare(incanter: Incanter):
         return dep1 + 1
 
     with pytest.raises(TypeError):
-        incanter.invoke(func)
-    assert signature(incanter.prepare(func)).parameters == {
+        incanter.compose_and_call(func)
+    assert signature(incanter.compose(func)).parameters == {
         "dep1": Parameter("dep1", Parameter.POSITIONAL_OR_KEYWORD)
     }
 
     incanter.register_hook(lambda p: p.name == "dep1", lambda: 2)
-    assert incanter.invoke(func) == 3
+    assert incanter.compose_and_call(func) == 3
 
-    assert signature(incanter.prepare(func)).parameters == {}
-    assert signature(incanter.prepare(func)).return_annotation is int
+    assert signature(incanter.compose(func)).parameters == {}
+    assert signature(incanter.compose(func)).return_annotation is int
 
 
 def test_reg_by_type(incanter: Incanter):
@@ -40,7 +40,7 @@ def test_reg_by_type(incanter: Incanter):
     def fn(arg: str):
         return "1.0" + arg
 
-    assert incanter.invoke(fn, 1.0) == "1.02.0"
+    assert incanter.compose_and_call(fn, 1.0) == "1.02.0"
 
 
 def test_incant_pos_args_by_type(incanter: Incanter):

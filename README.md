@@ -41,7 +41,7 @@ def now() -> float:
 def my_function(now: float) -> None:
     print(f"The time now is {now}")
 
-incanter.invoke(my_function)
+incanter.call(my_function)
 ```
 
 _incant_ has a fully type-annotated interface for use with Mypy and Pyright.

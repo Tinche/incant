@@ -1,11 +1,11 @@
 # Tutorial
 
 This section contains a long, narrative-style guide to _incant_.
-See the Usage section with a more focused description of the library API.
+See the [Usage section](usage.md) with a more focused description of the library API.
 
 Let's demonstrate the use of _incant_ with a number of hypothetical scenarios.
 While working for a tech company, you've been given an assignment: create a powerful, easy-to-use (yes, both) web framework for other developers in your company to use.
-You don't have to do it from scratch though, so you choose (essentially at random) an existing framework: [Quart](http://pgjones.gitlab.io/quart/) (Quart is an async version of Flask).
+You don't have to do it from scratch though, so you choose (essentially at random) an existing framework - [Quart](http://pgjones.gitlab.io/quart/) (Quart is an async version of Flask).
 Pretty much any other framework (sync or async) would have also worked; other implementations are left as an exercise to the reader.
 You decide to call this framework `QuickAPI`.
 
@@ -25,15 +25,14 @@ async def index():
 
 After a while, your colleague says they require the IP address of the incoming request.
 You explain the Quart API for this (`request.remote_addr`), but your colleague is adamant about following best practices (avoiding global variables) - they want it as an argument to their handler.
-They also want it as an instance of Python's `ipaddress.IPv4Address`. Their handler looks like this:
+They also want it as an instance of Python's [`ipaddress.IPv4Address`](https://docs.python.org/3/library/ipaddress.html#ipaddress.IPv4Address).
+Their handler looks like this:
 
 ```python
 @app.get("/ip")
 async def ip_address_handler(source_ip: IPv4Address) -> str:
     return f"Your address is {source_ip}"
 ```
-
-Well, looks like you've got your work cut out for you.
 
 At the top of the file, you import and prepare an {class}`incant.Incanter` instance.
 
@@ -60,7 +59,7 @@ This means any function invoked through the `Incanter` will have any parameters 
 You contemplate how to get this information to the `ip_address_handler`, and choose to write a simple decorator (yay Python!).
 Your colleague agrees, but (citing consistency) wants the decorator to be applied to all handlers going forward.
 
-(You could solve this more elegantly by subclassing the `quart.Quart` class but forgo this as this is an _incant_ tutorial, not a Quart one.)
+(You could solve this particular problem more elegantly by subclassing the `quart.Quart` class but forgo this as this is an _incant_ tutorial, not a Quart one.)
 
 You rub your hands and mutter "Let's roll" to yourself.
 
@@ -70,7 +69,7 @@ from functools import wraps
 def quickapi(handler):
     @wraps(handler)
     async def wrapper():
-        return await incanter.ainvoke(handler)
+        return await incanter.acompose_and_call(handler)
 
     return wrapper
 ```
@@ -104,13 +103,13 @@ Quart provides path parameters like this to handlers as `kwargs`, so you modify 
 def quickapi(handler):
     @wraps(handler)
     async def wrapper(**kwargs):
-        return await incanter.ainvoke(handler, **kwargs)
+        return await incanter.acompose_and_call(handler, **kwargs)
 
     return wrapper
 ```
 
 The decorator simply receives them and passes them along to the handler.
-This works because _incant_ will use arguments provided to `invoke()` if it cannot satisfy a parameter using its internal dependency factories.
+This works because _incant_ will use arguments provided to `compose_and_call()` if it cannot satisfy a parameter using its internal dependency factories.
 
 Another day of earning your keep!
 
@@ -147,7 +146,7 @@ def quickapi(handler):
     @wraps(handler)
     async def wrapper(**kwargs):
         log.info("Processing")
-        return await incanter.ainvoke(handler, **kwargs)
+        return await incanter.acompose_and_call(handler, **kwargs)
 
     return wrapper
 ```
@@ -165,13 +164,13 @@ TypeError: invoke_logging_handler() missing 1 required positional argument: 'log
 
 You change the `quickapi` decorator to use {meth}`incant.Incanter.aincant` (the async version of {meth}`incant() <incant.Incanter.incant>`) and always pass in the logger instance.
 _incant_ is meant for cases like this, forwarding the parameters if they are needed and skipping them otherwise.
-Since _incant_ doesn't itself call `invoke`, you prepare it yourself beforehand.
+Since _incant_ doesn't itself call `compose_and_call`, you prepare it yourself beforehand.
 
 ```python
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(handler)
+    prepared = incanter.compose(handler)
 
     @wraps(handler)
     async def wrapper(**kwargs):
@@ -197,7 +196,7 @@ class User:
     username: str
 
 async def current_user(session_token: str) -> User:
-    # Complex black magic goes here, immune to timing attacks.
+    # Complex black magic goes here, immune to timing attacks and whatnot.
     return User("admin")
 ```
 
@@ -217,8 +216,8 @@ You can use their `current_user` coroutine directly as a dependency factory:
 incanter.register_by_type(current_user)
 ```
 
-but this still leaves the issue of getting the cookie from somewhere.
-You define a dependency factory for the session token cookie:
+but this still leaves the issue of getting the session token from somewhere.
+You define a dependency factory for the session token cookie, using a lambda this time:
 
 ```python
 # We're using a lambda, so we pass in the `name` explicitly.
@@ -250,7 +249,7 @@ async def taskgroup_handler(tg: TaskGroup, log: BoundLogger) -> str:
     return "nice"
 ```
 
-You don't feel particularly challenged, as _incant_ support async context managers out of the box and the only thing you need to do is:
+You don't feel particularly challenged, as _incant_ supports async context managers out of the box and the only thing you need to do is:
 
 ```python
 incanter.register_by_type(TaskGroup, is_context_manager="async")
@@ -283,7 +282,7 @@ We change the `quickapi` decorator thusly:
 def quickapi(handler):
     log = logger.bind(handler=handler.__name__)
 
-    prepared = incanter.prepare(handler, forced_deps=[(apply_timeout, "sync")])
+    prepared = incanter.compose(handler, forced_deps=[(apply_timeout, "sync")])
 
     @wraps(handler)
     async def wrapper(**kwargs):
@@ -319,7 +318,7 @@ They want this to work for _any_ _attrs_ class.
 You know you can reach for the _cattrs_ library to load an _attrs_ class from JSON, but the dependency hook is a little more complex.
 Because the dependency hook needs to work for _any_ _attrs_ class, you need to use {meth}`incant.Incanter.register_hook_factory`, the most powerful but lowest level hook registration method.
 
-`incanter.register_hook_factory()` is for, like the name says, factories of dependency hooks.
+`register_hook_factory()` is for, like the name says, factories of dependency hooks.
 It will produce a different dependency hook for each _attrs_ class we encounter, which is what we need.
 
 ```python

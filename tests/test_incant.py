@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pytest
 
 from incant import Incanter
@@ -80,3 +82,14 @@ def test_kwargs_subclasses(incanter: Incanter) -> None:
         return x + 1
 
     assert incanter.incant(func, x=SubInt(2)) == 3
+
+
+def test_adapt(incanter: Incanter):
+    """Simple cases of adapt work."""
+
+    def func(x: Literal[0]) -> int:
+        return x + 1
+
+    adapted = incanter.adapt(func, lambda p: p.annotation == Literal[0])
+
+    assert adapted(0) == 1

@@ -1,9 +1,19 @@
 import linecache
 
 from inspect import Signature, iscoroutinefunction
-from typing import Any, Callable, Counter, Dict, List, Literal, Optional, Union
+from typing import (
+    Any,
+    Callable,
+    Counter,
+    Dict,
+    Final,
+    List,
+    Literal,
+    Optional,
+    Union,
+)
 
-from attr import define
+from attrs import define
 
 from ._compat import signature
 
@@ -28,7 +38,7 @@ class Invocation:
     is_ctx_manager: Optional[CtxManagerKind] = None
 
 
-def compile_invoke(
+def compile_compose(
     fn: Callable,
     fn_args: List[Callable],
     fn_factory_args: List[str],
@@ -36,7 +46,7 @@ def compile_invoke(
     invocations: List[Invocation],
     is_async: bool = False,
 ) -> Callable:
-    """Generate the invocation wrapper for `fn`.
+    """Generate the composition wrapper for `fn`.
 
     :param fn_factory_args: Used names to avoid for local variables.
     :param outer_args: Arguments that the generated function needs to retain.
@@ -92,6 +102,7 @@ def compile_invoke(
         local_var.factory: ix for ix, local_var in enumerate(invocations)
     }
     inline_exprs_by_factory: Dict[Callable, str] = {}
+    consts_by_factory: Dict[Callable, str] = {}
     ind = 0  # Indentation level
 
     local_counter = 0
@@ -112,6 +123,14 @@ def compile_invoke(
     inlineable = {fn for fn, cnt in factory_fns.items() if cnt == 1}
 
     for i, invoc in enumerate(invocations):
+        if _is_constant_factory(invoc):
+            const_val = invoc.factory()
+            global_name = f"_incant_constant_{i}"
+            globs[global_name] = const_val
+            consts_by_factory[invoc.factory] = global_name
+            continue
+
+        # Not a factory of constants.
         inv_fn_name = invoc.factory.__name__
         if (
             inv_fn_name not in taken_local_vars
@@ -129,7 +148,9 @@ def compile_invoke(
             if isinstance(local_arg, ParameterDep):
                 local_arg_lines.append(local_arg.arg_name)
             else:
-                if local_arg in inline_exprs_by_factory:
+                if local_arg in consts_by_factory:
+                    local_arg_lines.append(consts_by_factory[local_arg])
+                elif local_arg in inline_exprs_by_factory:
                     local_arg_lines.append(inline_exprs_by_factory[local_arg])
                 else:
                     local_arg_lines.append(
@@ -177,8 +198,13 @@ def compile_invoke(
         else:
             # We need to fish out the local name for this fn arg.
             factory = fn_args[cnt]
-            if factory in inline_exprs_by_factory:
+
+            if factory in consts_by_factory:
+                incant_arg_lines.append(consts_by_factory[factory])
+
+            elif factory in inline_exprs_by_factory:
                 incant_arg_lines.append(inline_exprs_by_factory[factory])
+
             else:
                 local_var_ix = local_vars_ix_by_factory[factory]
                 incant_arg_lines.append(f"_incant_local_{local_var_ix}")
@@ -257,3 +283,48 @@ def _generate_unique_filename(func_name: str, func_type: str, source: List[str])
         # Looks like this spot is taken. Try again.
         count += 1
         extra = f"-{count}"
+
+
+def _const_fn():
+    return 1
+
+
+_val = 2
+
+
+def _const_fn_2():
+    return _val
+
+
+_const_bytecodes: Final = {_const_fn.__code__.co_code, _const_fn_2.__code__.co_code}
+
+
+def _make_const_fns():
+    _inner_val = 3
+
+    def _const_fn_3():
+        return _inner_val
+
+    _const_bytecodes.add(_const_fn_3.__code__.co_code)
+
+
+_make_const_fns()
+
+
+def _is_constant_factory(invocation: Invocation) -> bool:
+    """
+    Is the given callable a factory of constants, and can be replaced with its result?
+    """
+    if iscoroutinefunction(invocation.factory):
+        # We cannot run coroutines to get their constants.
+        return False
+    if invocation.args:
+        # If there are args, it's not constant for sure.
+        return False
+    if invocation.is_ctx_manager:
+        # Context managers are too tricky.
+        return False
+    if not hasattr(invocation.factory, "__code__"):
+        # C functions might not have this.
+        return False
+    return invocation.factory.__code__.co_code in _const_bytecodes
