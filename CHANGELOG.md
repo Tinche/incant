@@ -8,13 +8,13 @@ The **third number** is when we need to start branches for older releases (only 
 
 ## 23.2.0 (UNRELEASED)
 
-- `Incanter.(a)invoke()` has been renamed to {py:meth}`Incanter.(a)compose_and_call() <incant.Incanter.compose_and_call>` for clarity.
+- `Incanter.(a)invoke()` has been renamed to {meth}`Incanter.(a)compose_and_call() <incant.Incanter.compose_and_call>` for clarity.
   `Incanter.(a)invoke()` is still present as an alias for backwards compatibility.
-- `Incanter.prepare()` has been renamed to {py:meth}`Incanter.compose() <incant.Incanter.compose>` for clarity.
+- `Incanter.prepare()` has been renamed to {meth}`Incanter.compose() <incant.Incanter.compose>` for clarity.
   `Incanter.prepare()` is still present as an alias for backwards compatibility.
-- Introduce {py:meth}`Incanter.adapt <incant.Incanter.adapt>`.
+- Introduce {meth}`Incanter.adapt <incant.Incanter.adapt>`.
 - Dependency factories of constants (`lambda: 1`) are now folded to just the constants in the generated source code, avoiding unnecessary function calls.
-- `Incanter.register_by_type() <incant.Incanter.register_by_type>` now also triggers on type equality (in addition to subclasses).
+- {meth}`Incanter.register_by_type() <incant.Incanter.register_by_type>` now also triggers on type equality (in addition to subclasses).
   This makes it usable with types such as `Callable`.
 - Python 3.12 support.
 
