@@ -92,4 +92,4 @@ def test_adapt(incanter: Incanter):
 
     adapted = incanter.adapt(func, lambda p: p.annotation == Literal[0])
 
-    assert adapted(1) == 2
+    assert adapted(0) == 1

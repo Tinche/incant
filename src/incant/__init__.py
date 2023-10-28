@@ -193,7 +193,10 @@ class Incanter:
         else:
             type_to_reg = type
         self.register_hook(
-            lambda p: is_subclass(p.annotation, type_to_reg), fn, is_ctx_manager
+            lambda p: p.annotation == type_to_reg
+            or is_subclass(p.annotation, type_to_reg),
+            fn,
+            is_ctx_manager,
         )
         return fn
 

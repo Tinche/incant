@@ -14,6 +14,8 @@ The **third number** is when we need to start branches for older releases (only 
   `Incanter.prepare()` is still present as an alias for backwards compatibility.
 - Introduce {py:meth}`Incanter.adapt <incant.Incanter.adapt>`.
 - Dependency factories of constants (`lambda: 1`) are now folded to just the constants in the generated source code, avoiding unnecessary function calls.
+- `Incanter.register_by_type() <incant.Incanter.register_by_type>` now also triggers on type equality (in addition to subclasses).
+  This makes it usable with types such as `Callable`.
 - Python 3.12 support.
 
 ## 23.1.0 (2023-07-14)

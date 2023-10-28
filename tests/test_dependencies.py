@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from inspect import Parameter, getsource, signature
 from sys import version_info
 from time import sleep, time
+from typing import Callable
 
 import pytest
 
@@ -381,3 +382,16 @@ def test_time_not_constant(incanter: Incanter) -> None:
     second = incanter.compose_and_call(lambda time: time)
 
     assert first != second
+
+
+def test_reg_by_type_identity(incanter: Incanter) -> None:
+    """Register by type works on type identity too, not just subclassing."""
+
+    @incanter.register_by_type
+    def callable_factory() -> Callable[[int], int]:
+        return lambda x: x + 1
+
+    def func(c: Callable[[int], int]) -> int:
+        return c(1)
+
+    assert incanter.compose_and_call(func) == 2
