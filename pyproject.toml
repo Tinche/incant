@@ -51,6 +51,7 @@ docs = [
     "myst_parser",
     "sphinx_inline_tabs",
     "pyyaml>=6.0.1",
+    "sphinx-copybutton>=0.5.2",
 ]
 
 [tool.isort]

@@ -31,7 +31,12 @@ release = v(project)
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "myst_parser", "sphinx_inline_tabs"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "myst_parser",
+    "sphinx_inline_tabs",
+    "sphinx_copybutton",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -64,3 +69,8 @@ html_theme_options = {
     },
     "dark_css_variables": {"color-highlight-on-target": "transparent"},
 }
+
+copybutton_prompt_text = r">>> |\.\.\. "
+copybutton_prompt_is_regexp = True
+
+python_use_unqualified_type_names = False

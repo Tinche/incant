@@ -1,7 +1,7 @@
 # Usage
 
 This section contains a quick usage guide to both aspects of _incant_.
-_incant_ functionality broadly falls in two categories, called the _convenience layer_ and the _power layer_.
+_incant_ methods fall broadly in two API layers, called the _convenience layer_ and the _power layer_.
 The _convenience layer_ functionality will let you get started quickly and elegantly, while the _power layer_ will unlock the most customizability and performance.
 
 ## Function Composition
@@ -117,14 +117,18 @@ Also be aware that since in Python lambdas don't play well with caching, if you'
 ```
 
 ```{note}
-{meth}`incant.Incanter.compose` is part of the _power layer_.
+{meth}`Incanter.compose() <incant.Incanter.compose>` is part of the _power layer_.
 ```
 
 ## Function Invocation
 
-Incanter instances also have helper methods, {meth}`Incanter.incant() <incant.Incanter.incant>` and {meth}`Incanter.aincant() <incant.Incanter.aincant>` that serve as a smart helper for calling functions.
+Incanter instances also have helper methods, {meth}`Incanter.incant() <incant.Incanter.incant>` and {meth}`Incanter.aincant() <incant.Incanter.aincant>`, that serve as a smart helper for calling functions.
 `incant()` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
 `incant()` also composes nicely with `compose()`, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
+
+```{note}
+{meth}`Incanter.incant() <incant.Incanter.incant>` and {meth}`Incanter.aincant() <incant.Incanter.aincant>` are part of the convenience layer_.
+```
 
 {meth}`Incanter.incant() <incant.Incanter.incant>` uses {meth}`Incanter.adapt() <incant.Incanter.adapt>` internally.
 `adapt()` takes a function to be called and a series of predicates describing future parameters, and produces a function accepting these parameters and smartly forwarding them to the original function.
@@ -136,3 +140,7 @@ Predicate functions take an [`inspect.Parameter`](https://docs.python.org/3/libr
 
 `register_hook()` delegates to {meth}`Incanter.register_hook_factory() <incant.Incanter.register_hook_factory>`, which takes a predicate function and a factory of depedendency factories.
 This outer factory takes an `inspect.Parameter` and returns a depedency factory, enabling generic depedendency factories.
+
+```{note}
+{meth}`Incanter.adapt() <incant.Incanter.adapt>`, {meth}`Incanter.register_hook() <incant.Incanter.register_hook>` and {meth}`Incanter.register_hook_factory() <incant.Incanter.register_hook_factory>` are part of the _power layer_.
+```
