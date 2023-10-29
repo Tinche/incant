@@ -12,8 +12,9 @@ changelog.md
 indices.md
 modules.rst
 ```
-```{eval-rst}
-.. currentmodule:: incant
+
+```{currentmodule} incant
+
 ```
 
 **incant** is a Python open source library for **composing** and **calling functions**.
@@ -31,10 +32,10 @@ _incant_ includes support for:
 _incant_ has a very lean API surface, the core API being:
 
 - a single class, {class}`incant.Incanter`, for keeping state (dependency rules)
-- a method for registering dependencies, {meth}`Incanter.register_hook() <incant.Incanter.register_hook>`, and a number of higher level, more user-friendly aliases
-- methods for calling arbitrary functions while composing them with their dependencies: {meth}`Incanter.compose_and_call() <incant.Incanter.compose_and_call>` and its async variant, {meth}`Incanter.acompose_and_call() <incant.Incanter.acompose_and_call>`
-- methods for invoking arbitrary functions while picking and forwarding any required arguments: {meth}`Incanter.incant() <incant.Incanter.incant>` and its async variant, {meth}`Incanter.aincant() <incant.Incanter.aincant>`
-- methods for composing functions in advance, without calling them: {meth}`Incanter.compose() <incant.Incanter.compose>`
+- a method for registering dependencies, {meth}`Incanter.register_hook`, and a number of higher level, more user-friendly aliases
+- methods for calling arbitrary functions while composing them with their dependencies: {meth}`Incanter.compose_and_call` and its async variant, {meth}`Incanter.acompose_and_call`
+- methods for invoking arbitrary functions while picking and forwarding any required arguments: {meth}`Incanter.incant` and its async variant, {meth}`Incanter.aincant`
+- methods for composing functions in advance, without calling them: {meth}`Incanter.compose`
 - methods for adjusting arbitrary functions to arbitrary parameters: {meth}`Incanter.adapt`
 
 _incant_ is able to leverage runtime type annotations but is also capable of functioning without them.

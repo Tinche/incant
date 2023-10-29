@@ -1,3 +1,7 @@
+```{currentmodule} incant
+
+```
+
 # Tutorial
 
 This section contains a long, narrative-style guide to _incant_.
@@ -34,7 +38,7 @@ async def ip_address_handler(source_ip: IPv4Address) -> str:
     return f"Your address is {source_ip}"
 ```
 
-At the top of the file, you import and prepare an {class}`incant.Incanter` instance.
+At the top of the file, you import and prepare an {class}`Incanter` instance.
 
 ```python
 from incant import Incanter
@@ -59,7 +63,7 @@ This means any function invoked through the `Incanter` will have any parameters 
 You contemplate how to get this information to the `ip_address_handler`, and choose to write a simple decorator (yay Python!).
 Your colleague agrees, but (citing consistency) wants the decorator to be applied to all handlers going forward.
 
-(You could solve this particular problem more elegantly by subclassing the `quart.Quart` class but forgo this as this is an _incant_ tutorial, not a Quart one.)
+(You could solve this particular problem by subclassing the `quart.Quart` class but forgo this as this is an _incant_ tutorial, not a Quart one.)
 
 You rub your hands and mutter "Let's roll" to yourself.
 
@@ -74,7 +78,7 @@ def quickapi(handler):
     return wrapper
 ```
 
-{py:meth}`incant.Incanter.ainvoke` (the async version of {meth}`invoke() <incant.Incanter.invoke>`) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
+{meth}`Incanter.ainvoke` (the async version of {meth}`Incanter.invoke`) does what you want - invokes the coroutine you give it while satisfying its arguments from its internal dependency factories.
 
 Then you just apply the decorators to both existing handlers.
 
@@ -109,7 +113,7 @@ def quickapi(handler):
 ```
 
 The decorator simply receives them and passes them along to the handler.
-This works because _incant_ will use arguments provided to `compose_and_call()` if it cannot satisfy a parameter using its internal dependency factories.
+This works because _incant_ will use arguments provided to {meth}`~Incanter.compose_and_call` if it cannot satisfy a parameter using its internal dependency factories.
 
 Another day of earning your keep!
 
@@ -162,7 +166,7 @@ However, the `logging_handler` handler requires it. Without changes, invoking th
 TypeError: invoke_logging_handler() missing 1 required positional argument: 'log'
 ```
 
-You change the `quickapi` decorator to use {meth}`incant.Incanter.aincant` (the async version of {meth}`incant() <incant.Incanter.incant>`) and always pass in the logger instance.
+You change the `quickapi` decorator to use {meth}`Incanter.aincant` (the async version of {meth}`Incanter.incant`) and always pass in the logger instance.
 _incant_ is meant for cases like this, forwarding the parameters if they are needed and skipping them otherwise.
 Since _incant_ doesn't itself call `compose_and_call`, you prepare it yourself beforehand.
 
@@ -232,7 +236,7 @@ Pretty cool!
 ## Async Context Managers
 
 A colleague of yours has heard of this newfangled concept of structured concurrency, and insists on trying it out.
-You offer to let them use TaskGroups from the _quattro_ library.
+You offer to let them use TaskGroups from the [_quattro_](https://github.com/Tinche/quattro/) library.
 
 Their handler looks like this:
 
@@ -316,7 +320,7 @@ async def attrs_handler(payload: SamplePayload, log) -> str:
 
 They want this to work for _any_ _attrs_ class.
 You know you can reach for the _cattrs_ library to load an _attrs_ class from JSON, but the dependency hook is a little more complex.
-Because the dependency hook needs to work for _any_ _attrs_ class, you need to use {meth}`incant.Incanter.register_hook_factory`, the most powerful but lowest level hook registration method.
+Because the dependency hook needs to work for _any_ _attrs_ class, you need to use {meth}`Incanter.register_hook_factory`, the most powerful but lowest level hook registration method.
 
 `register_hook_factory()` is for, like the name says, factories of dependency hooks.
 It will produce a different dependency hook for each _attrs_ class we encounter, which is what we need.
@@ -382,4 +386,4 @@ incanter.register_hook_factory(
 )
 ```
 
-The complete source code of this mini-project can be found at https://github.com/Tinche/incant/blob/main/tests/quickapi.py.
+The complete source code of this mini-project can be found at [quickapi.py](https://github.com/Tinche/incant/blob/main/tests/quickapi.py).

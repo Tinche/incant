@@ -12,7 +12,7 @@ Dependency injection is a very common example of function composition, and apply
 In _incant_, you define rules which determine how _incant_ chooses which functions to use for compositions.
 These rules are then applied to a function, producing another function which encapsulates the given function and all its dependent functions (called dependencies).
 
-This state (in the form of dependency factories) is kept in an instance of {class}`incant.Incanter`.
+This state (in the form of dependency factories) is kept in an instance of {class}`Incanter`.
 
 ```python
 from incant import Incanter
@@ -20,7 +20,7 @@ from incant import Incanter
 incanter = Incanter()
 ```
 
-The `incanter` can now be used to compose and call functions ({meth}`incant.Incanter.compose_and_call`) and coroutines ({meth}`incant.Incanter.acompose_and_call`).
+The `incanter` can now be used to compose and call functions ({meth}`Incanter.compose_and_call`) and coroutines ({meth}`Incanter.acompose_and_call`).
 Since there are no rules (dependency factories) registered yet, `incanter.compose_and_call(fn, a, b, c)` does nothing and is exactly equivalent to `fn(a, b, c)`.
 
 ```python
@@ -71,13 +71,13 @@ incanter.compose_and_call(another_function)
 ```
 
 ```{note}
-{meth}`incant.Incanter.compose_and_call`, {meth}`incant.Incanter.acompose_and_call`, {meth}`incant.Incanter.register_by_name` and {meth}`incant.Incanter.register_by_type` are part of the _convenience layer_.
+{meth}`Incanter.compose_and_call`, {meth}`Incanter.acompose_and_call`, {meth}`Incanter.register_by_name` and {meth}`Incanter.register_by_type` are part of the _convenience layer_.
 ```
 
 Dependency factories may themselves have dependencies provided to them, as shown in the above example.
 _incant_ performs a depth-first pass of gathering nested dependencies.
 
-{meth}`Incanter.compose_and_call() <incant.Incanter.compose_and_call>` uses {meth}`Incanter.compose() <incant.Incanter.compose>` internally.
+{meth}`Incanter.compose_and_call` uses {meth}`Incanter.compose` internally.
 `compose()` does the actual heavy lifting of creating and caching a wrapper with the dependencies processed and composed.
 It's useful for getting the wrappers for caching or inspection - the wrappers support ordinary Python introspection using the standard library [`inspect`](https://docs.python.org/3/library/inspect.html) module.
 
@@ -122,25 +122,25 @@ Also be aware that since in Python lambdas don't play well with caching, if you'
 
 ## Function Invocation
 
-Incanter instances also have helper methods, {meth}`Incanter.incant() <incant.Incanter.incant>` and {meth}`Incanter.aincant() <incant.Incanter.aincant>`, that serve as a smart helper for calling functions.
+Incanter instances also have helper methods, {meth}`Incanter.incant` and {meth}`Incanter.aincant`, that serve as a smart helper for calling functions.
 `incant()` filters out unnecessary arguments before calling the given function, and is a useful tool for building generic components.
 `incant()` also composes nicely with `compose()`, where you can prepare a function in advance (to inject dependencies) and incant it with proper parameters.
 
 ```{note}
-{meth}`Incanter.incant() <incant.Incanter.incant>` and {meth}`Incanter.aincant() <incant.Incanter.aincant>` are part of the convenience layer_.
+{meth}`Incanter.incant` and {meth}`Incanter.aincant` are part of the convenience layer_.
 ```
 
-{meth}`Incanter.incant() <incant.Incanter.incant>` uses {meth}`Incanter.adapt() <incant.Incanter.adapt>` internally.
+{meth}`Incanter.incant` uses {meth}`Incanter.adapt` internally.
 `adapt()` takes a function to be called and a series of predicates describing future parameters, and produces a function accepting these parameters and smartly forwarding them to the original function.
 
-`register_by_name` and `register_by_type` delegate to {meth}`Incanter.register_hook() <incant.Incanter.register_hook>`.
+`register_by_name` and `register_by_type` delegate to {meth}`Incanter.register_hook`.
 `register_hook()` takes a predicate function and a dependency factory.
 When determining if a depency factory can be used for a parameter, _incant_ will try predicate functions (from newest to oldest) until one matches and use that dependency.
 Predicate functions take an [`inspect.Parameter`](https://docs.python.org/3/library/inspect.html#inspect.Parameter) and return a `bool`, so they can match using anything present in `Parameter`.
 
-`register_hook()` delegates to {meth}`Incanter.register_hook_factory() <incant.Incanter.register_hook_factory>`, which takes a predicate function and a factory of depedendency factories.
+`register_hook()` delegates to {meth}`Incanter.register_hook_factory`, which takes a predicate function and a factory of depedendency factories.
 This outer factory takes an `inspect.Parameter` and returns a depedency factory, enabling generic depedendency factories.
 
 ```{note}
-{meth}`Incanter.adapt() <incant.Incanter.adapt>`, {meth}`Incanter.register_hook() <incant.Incanter.register_hook>` and {meth}`Incanter.register_hook_factory() <incant.Incanter.register_hook_factory>` are part of the _power layer_.
+{meth}`Incanter.adapt`, {meth}`Incanter.register_hook` and {meth}`Incanter.register_hook_factory` are part of the _power layer_.
 ```
