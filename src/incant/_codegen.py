@@ -286,14 +286,14 @@ def _generate_unique_filename(func_name: str, func_type: str, source: List[str])
 
 
 def _const_fn():
-    return 1
+    return 1  # pragma: no cover
 
 
 _val = 2
 
 
 def _const_fn_2():
-    return _val
+    return _val  # pragma: no cover
 
 
 _const_bytecodes: Final = {_const_fn.__code__.co_code, _const_fn_2.__code__.co_code}
@@ -303,7 +303,7 @@ def _make_const_fns():
     _inner_val = 3
 
     def _const_fn_3():
-        return _inner_val
+        return _inner_val  # pragma: no cover
 
     _const_bytecodes.add(_const_fn_3.__code__.co_code)
 
