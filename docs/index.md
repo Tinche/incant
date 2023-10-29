@@ -12,6 +12,9 @@ changelog.md
 indices.md
 modules.rst
 ```
+```{eval-rst}
+.. currentmodule:: incant
+```
 
 **incant** is a Python open source library for **composing** and **calling functions**.
 _Dependency injection_ is but one of many use-cases served well by _incant_; wrapping functions with context managers for observability is another.
@@ -32,7 +35,7 @@ _incant_ has a very lean API surface, the core API being:
 - methods for calling arbitrary functions while composing them with their dependencies: {meth}`Incanter.compose_and_call() <incant.Incanter.compose_and_call>` and its async variant, {meth}`Incanter.acompose_and_call() <incant.Incanter.acompose_and_call>`
 - methods for invoking arbitrary functions while picking and forwarding any required arguments: {meth}`Incanter.incant() <incant.Incanter.incant>` and its async variant, {meth}`Incanter.aincant() <incant.Incanter.aincant>`
 - methods for composing functions in advance, without calling them: {meth}`Incanter.compose() <incant.Incanter.compose>`
-- methods for adjusting arbitrary functions to arbitrary parameters: {meth}`Incanter.adapt() <incant.Incanter.adapt>`
+- methods for adjusting arbitrary functions to arbitrary parameters: {meth}`Incanter.adapt`
 
 _incant_ is able to leverage runtime type annotations but is also capable of functioning without them.
 _incant_ is also fully type-annotated for use with Mypy and smart editors.
