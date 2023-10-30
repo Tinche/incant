@@ -6,7 +6,7 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is when we need to start branches for older releases (only for emergencies).
 
-## 23.2.0 (UNRELEASED)
+## 23.2.0 (2023-10-30)
 
 - `Incanter.(a)invoke()` has been renamed to {meth}`Incanter.(a)compose_and_call() <incant.Incanter.compose_and_call>` for clarity.
   `Incanter.(a)invoke()` is still present as an alias for backwards compatibility.
