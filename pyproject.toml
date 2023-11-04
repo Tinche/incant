@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -16,12 +16,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
     "Typing :: Typed",
 ]
-version = "23.2.0"
 requires-python = ">=3.8"
 description = "Magical function composition"
 readme = "README.md"
 dependencies = ["attrs"]
 license = {file = "LICENSE"}
+dynamic = ["version"]
 
 [project.urls]
 Home = "https://github.com/Tinche/incant"
