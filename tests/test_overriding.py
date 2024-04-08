@@ -1,6 +1,5 @@
 from inspect import Parameter, signature
 
-
 try:
     from typing import Annotated
 except ImportError:

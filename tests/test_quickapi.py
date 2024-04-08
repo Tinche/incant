@@ -4,7 +4,6 @@ from sys import version_info
 from time import perf_counter
 
 import pytest
-
 from httpx import AsyncClient
 from uvicorn import Config, Server
 
@@ -20,7 +19,7 @@ class UvicornTestServer(Server):
 async def quickapi_server(unused_tcp_port_factory):
     port = unused_tcp_port_factory()
     s = UvicornTestServer(Config(app=app, port=port))
-    _ = create_task(s.serve())
+    _ = create_task(s.serve())  # noqa: RUF006
     yield f"http://localhost:{port}"
     s.should_exit = True
     await sleep(0.2)

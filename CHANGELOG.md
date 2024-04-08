@@ -6,6 +6,12 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is when we need to start branches for older releases (only for emergencies).
 
+## 24.1.0 (UNRELEASED)
+
+- Fix a code generation issue with context managers, and generate prettier code (for inspection).
+  ([#15](https://github.com/Tinche/incant/pull/15))
+- Use Ruff for import sorting.
+
 ## 23.2.0 (2023-10-30)
 
 - `Incanter.(a)invoke()` has been renamed to {meth}`Incanter.(a)compose_and_call() <incant.Incanter.compose_and_call>` for clarity.

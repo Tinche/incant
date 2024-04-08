@@ -1,12 +1,10 @@
 import sys
-
 from functools import partial
 from inspect import Parameter
 from inspect import signature as sig
 from typing import Any, Optional
 
 from attr import frozen
-
 
 NO_OVERRIDE = object()
 

@@ -19,7 +19,7 @@ classifiers = [
 requires-python = ">=3.8"
 description = "Magical function composition"
 readme = "README.md"
-dependencies = ["attrs"]
+dependencies = ["attrs>=20.1.0"]
 license = {file = "LICENSE"}
 dynamic = ["version"]
 
@@ -41,7 +41,6 @@ test = [
 ]
 lint = [
     "black>=23.3.0",
-    "isort>=5.11.4",
     "ruff>=0.0.272",
     "mypy>=0.991",
 ]
@@ -54,9 +53,6 @@ docs = [
     "sphinx-copybutton>=0.5.2",
 ]
 
-[tool.isort]
-profile = "attrs"
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 
@@ -68,8 +64,7 @@ warn_redundant_casts = true
 parallel = true
 source_pkgs = ["incant"]
 
-[tool.ruff]
-src = ["src", "tests"]
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle
     "W",   # pycodestyle
@@ -90,12 +85,12 @@ select = [
     "PIE", # flake8-pie
     "RUF", # ruff
     "ARG", # flake8-unused-arguments
+    "I",   # isort
 ]
 ignore = [
     "E501",   # line length is handled by black
     "S101",   # assert
     "S307",   # Eval
-    "PGH001", # No eval lol?
     "PGH003", # leave my type: ignores alone
     "B008",   # can't get it to work with extend-immutable-calls
 ]
