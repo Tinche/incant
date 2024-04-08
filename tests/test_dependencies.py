@@ -3,10 +3,9 @@ from contextlib import contextmanager
 from inspect import Parameter, getsource, signature
 from sys import version_info
 from time import sleep, time
-from typing import Callable
+from typing import Callable, TextIO
 
 import pytest
-
 from attrs import define
 
 from incant import Incanter, IncantError
@@ -395,3 +394,26 @@ def test_reg_by_type_identity(incanter: Incanter) -> None:
         return c(1)
 
     assert incanter.compose_and_call(func) == 2
+
+
+def test_context_manager_locals(incanter: Incanter) -> None:
+    """A pathological case with context managers."""
+
+    with open("f.txt", "w") as f:
+        f.write("test")
+
+    @incanter.register_by_name
+    def local() -> str:
+        return "f.txt"
+
+    @incanter.register_by_name(is_ctx_manager="sync")
+    @contextmanager
+    def dep1(local: str):
+        with open(local) as f:
+            yield f
+
+    @incanter.register_by_name
+    def func(dep1: TextIO) -> str:
+        return dep1.read()
+
+    assert incanter.compose_and_call(func)
