@@ -18,7 +18,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "pypy-3.8"]
 
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
 
       - uses: "actions/setup-python@v4"
         with:
@@ -47,7 +47,7 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
       
       - uses: "actions/setup-python@v4"
         with:
@@ -71,6 +71,9 @@ jobs:
 
           export TOTAL=$(python -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
           echo "total=$TOTAL" >> $GITHUB_ENV
+
+          # Report again and fail if under the threshold.
+          python -Im coverage report --fail-under=99
 
       - name: "Upload HTML report."
         uses: "actions/upload-artifact@v3"
@@ -97,7 +100,7 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
 
       - uses: "actions/setup-python@v4"
         with:
