@@ -1,5 +1,4 @@
 import linecache
-
 from inspect import Signature, iscoroutinefunction
 from typing import (
     Any,
@@ -10,6 +9,7 @@ from typing import (
     List,
     Literal,
     Optional,
+    Set,
     Union,
 )
 
@@ -57,7 +57,6 @@ def compile_compose(
     sig = signature(fn)
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
     globs: Dict[str, Any] = {}
-    taken_local_vars = set()
     arg_lines = []
 
     for dep in outer_args:
@@ -79,7 +78,6 @@ def compile_compose(
             globs[arg_default] = dep.default
 
         arg_lines.append(f"{dep.arg_name}{arg_type_snippet}")
-        taken_local_vars.add(dep.arg_name)
     outer_arg_names = {o.arg_name for o in outer_args}
 
     lines = []
@@ -125,22 +123,23 @@ def compile_compose(
     for i, invoc in enumerate(invocations):
         if _is_constant_factory(invoc):
             const_val = invoc.factory()
-            global_name = f"_incant_constant_{i}"
+            global_name = _pick_name(
+                invoc.factory.__name__
+                if invoc.factory.__name__ != "lambda"
+                else "lambda",
+                globs,
+                outer_arg_names,
+                f"_incant_constant_{i}",
+            )
             globs[global_name] = const_val
             consts_by_factory[invoc.factory] = global_name
             continue
 
         # Not a factory of constants.
         inv_fn_name = invoc.factory.__name__
-        if (
-            inv_fn_name not in taken_local_vars
-            and inv_fn_name not in globs
-            and inv_fn_name != "<lambda>"
-        ):
-            global_fn_name = inv_fn_name
-        else:
-            global_fn_name = f"_incant_local_factory_{i}"
-
+        global_fn_name = _pick_name(
+            inv_fn_name, globs, outer_arg_names, f"_incant_local_factory_{i}"
+        )
         globs[global_fn_name] = invoc.factory
 
         local_arg_lines = []
@@ -164,7 +163,7 @@ def compile_compose(
             ] = f"{aw}{global_fn_name}({', '.join(local_arg_lines)})"
 
         else:
-            local_name = f"_incant_local_{local_counter}"
+            local_name = f"_incant_local_{local_vars_ix_by_factory[invoc.factory]}"
 
             if invoc.is_ctx_manager is not None:
                 aw = "async " if invoc.is_ctx_manager == "async" else ""
@@ -212,15 +211,7 @@ def compile_compose(
 
     aw = "await " if iscoroutinefunction(fn) else ""
     orig_name = fn.__name__
-    if (
-        orig_name != "<lambda>"
-        and orig_name not in globs
-        and orig_name not in outer_arg_names
-        and orig_name not in taken_local_vars
-    ):
-        inner_name = fn.__name__
-    else:
-        inner_name = "_incant_inner_fn"
+    inner_name = _pick_name(orig_name, globs, outer_arg_names, "_incant_inner_fn")
     globs[inner_name] = fn
     lines.append(f"  {' ' * ind}return {aw}{inner_name}({', '.join(incant_arg_lines)})")
 
@@ -328,3 +319,14 @@ def _is_constant_factory(invocation: Invocation) -> bool:
         # C functions might not have this.
         return False
     return invocation.factory.__code__.co_code in _const_bytecodes
+
+
+def _pick_name(ideal: str, globs: Dict[str, str], args: Set[str], fallback: str) -> str:
+    """Pick the best name possible for a local variable.
+
+    If `ideal` is not available, return the fallback.
+    """
+    if ideal not in globs and ideal not in args and "<" not in ideal:
+        return ideal
+
+    return fallback

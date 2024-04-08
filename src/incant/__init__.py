@@ -15,7 +15,7 @@ from typing import (
     Union,
 )
 
-from attr import Factory, define, field, frozen
+from attrs import Factory, define, field, frozen
 
 from ._codegen import (
     CtxManagerKind,
@@ -25,7 +25,6 @@ from ._codegen import (
     compile_incant_wrapper,
 )
 from ._compat import NO_OVERRIDE, Override, get_annotated_override, signature
-
 
 __all__ = ["NO_OVERRIDE", "Override", "Hook", "Incanter", "IncantError"]
 
@@ -64,14 +63,16 @@ class Hook:
 
     @classmethod
     def for_name(cls, name: str, hook: Optional[Callable]) -> "Hook":
-        return cls(lambda p: p.name == name, None if hook is None else (lambda _: hook, None))  # type: ignore
+        return cls(
+            lambda p: p.name == name, None if hook is None else (lambda _: hook, None)
+        )
 
     @classmethod
     def for_type(cls, type: Any, hook: Optional[Callable]) -> "Hook":
         """Register by exact type (subclasses won't match)."""
         return cls(
             lambda p: p.annotation == type,
-            None if hook is None else (lambda _: hook, None),  # type: ignore
+            None if hook is None else (lambda _: hook, None),
         )
 
 

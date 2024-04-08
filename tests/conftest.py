@@ -1,6 +1,5 @@
-from pytest import fixture
-
 from incant import Incanter
+from pytest import fixture
 
 
 @fixture

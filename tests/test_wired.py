@@ -7,7 +7,6 @@ from collections import defaultdict
 from typing import List
 
 from attrs import Factory, define
-
 from incant import Incanter
 
 

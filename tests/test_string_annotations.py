@@ -2,13 +2,10 @@
 from __future__ import annotations
 
 import sys
-
 from inspect import Parameter, signature
 
 import pytest
-
 from incant import Incanter
-
 
 pytestmark = pytest.mark.skipif(
     sys.version_info < (3, 10), reason="String annotations not supported"

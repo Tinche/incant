@@ -4,10 +4,8 @@ from contextlib import asynccontextmanager
 from inspect import Parameter, signature
 
 import pytest
-
-from quattro import TaskGroup
-
 from incant import Incanter
+from quattro import TaskGroup
 
 
 async def test_async_invoke(incanter: Incanter):
