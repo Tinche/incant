@@ -10,6 +10,8 @@ The **third number** is when we need to start branches for older releases (only 
 
 - Fix a code generation issue with context managers, and generate prettier code (for inspection).
   ([#15](https://github.com/Tinche/incant/pull/15))
+- Python 3.12 support.
+  ([#16](https://github.com/Tinche/incant/pull/16))
 - Use Ruff for import sorting.
 
 ## 23.2.0 (2023-10-30)
