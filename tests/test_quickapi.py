@@ -1,4 +1,5 @@
 """Tests for the quickapi module."""
+
 from asyncio import create_task, sleep
 from sys import version_info
 from time import perf_counter

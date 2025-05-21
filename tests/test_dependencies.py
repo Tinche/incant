@@ -9,6 +9,7 @@ from typing import Callable, TextIO
 
 import pytest
 from attrs import define
+
 from incant import Incanter, IncantError
 
 

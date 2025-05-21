@@ -3,10 +3,12 @@
 Note: this isn't necessarily idiomatic incant usage, just tests
 to prove feature parity.
 """
+
 from collections import defaultdict
 from typing import List
 
 from attrs import Factory, define
+
 from incant import Incanter
 
 
@@ -140,9 +142,11 @@ def test_greeter_contexts(incanter: Incanter):
 
     incanter.register_by_name(lambda: "!!", name="punctuation")
     incanter.register_by_type(
-        lambda customer, punctuation: FrenchGreeter(punctuation)
-        if isinstance(customer, FrenchCustomer)
-        else Greeter(punctuation),
+        lambda customer, punctuation: (
+            FrenchGreeter(punctuation)
+            if isinstance(customer, FrenchCustomer)
+            else Greeter(punctuation)
+        ),
         Greeter,
     )
 
