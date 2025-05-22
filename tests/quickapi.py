@@ -1,8 +1,9 @@
 from asyncio import sleep
+from contextlib import AbstractContextManager
 from functools import wraps
 from inspect import Parameter
 from ipaddress import IPv4Address
-from typing import ContextManager, NewType
+from typing import NewType
 
 from attrs import define, has
 from cattrs import structure
@@ -21,7 +22,9 @@ logger = get_logger()
 Header = NewType("Header", str)
 
 
-def apply_timeout(timeout: Header = Header("1.0")) -> ContextManager[CancelScope]:
+def apply_timeout(
+    timeout: Header = Header("1.0"),
+) -> AbstractContextManager[CancelScope]:
     return fail_after(float(timeout))
 
 

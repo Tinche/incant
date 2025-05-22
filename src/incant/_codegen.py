@@ -1,17 +1,7 @@
 import linecache
+from collections import Counter
 from inspect import Signature, iscoroutinefunction
-from typing import (
-    Any,
-    Callable,
-    Counter,
-    Dict,
-    Final,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Union,
-)
+from typing import Any, Callable, Final, Literal, Optional, Union
 
 from attrs import define
 
@@ -33,17 +23,17 @@ class Invocation:
     """Produce an invocation (and possibly a local var) in a generated function."""
 
     factory: Callable
-    args: List[Union[Callable, ParameterDep]]
+    args: list[Union[Callable, ParameterDep]]
     is_forced: bool = False
     is_ctx_manager: Optional[CtxManagerKind] = None
 
 
 def compile_compose(
     fn: Callable,
-    fn_args: List[Callable],
-    fn_factory_args: List[str],
-    outer_args: List[ParameterDep],
-    invocations: List[Invocation],
+    fn_args: list[Callable],
+    fn_factory_args: list[str],
+    outer_args: list[ParameterDep],
+    invocations: list[Invocation],
     is_async: bool = False,
 ) -> Callable:
     """Generate the composition wrapper for `fn`.
@@ -56,7 +46,7 @@ def compile_compose(
     # Some arguments need to be calculated from factories.
     sig = signature(fn)
     fn_name = f"invoke_{fn.__name__}" if fn.__name__ != "<lambda>" else "invoke_lambda"
-    globs: Dict[str, Any] = {}
+    globs: dict[str, Any] = {}
     arg_lines = []
 
     for dep in outer_args:
@@ -99,8 +89,8 @@ def compile_compose(
     local_vars_ix_by_factory = {
         local_var.factory: ix for ix, local_var in enumerate(invocations)
     }
-    inline_exprs_by_factory: Dict[Callable, str] = {}
-    consts_by_factory: Dict[Callable, str] = {}
+    inline_exprs_by_factory: dict[Callable, str] = {}
+    consts_by_factory: dict[Callable, str] = {}
     ind = 0  # Indentation level
 
     local_counter = 0
@@ -226,7 +216,7 @@ def compile_compose(
 
 
 def compile_incant_wrapper(
-    fn: Callable, incant_plan: List[Union[int, str]], num_pos_args: int, num_kwargs: int
+    fn: Callable, incant_plan: list[Union[int, str]], num_pos_args: int, num_kwargs: int
 ):
     fn_name = f"incant_{fn.__name__}" if fn.__name__ != "<lambda>" else "incant_lambda"
     globs = {"_incant_inner_fn": fn}
@@ -257,7 +247,7 @@ def compile_incant_wrapper(
     return globs[fn_name]
 
 
-def _generate_unique_filename(func_name: str, func_type: str, source: List[str]) -> str:
+def _generate_unique_filename(func_name: str, func_type: str, source: list[str]) -> str:
     """
     Create a "filename" suitable for a function being generated.
     """
@@ -323,7 +313,7 @@ def _is_constant_factory(invocation: Invocation) -> bool:
     return invocation.factory.__code__.co_code in _const_bytecodes
 
 
-def _pick_name(ideal: str, globs: Dict[str, str], args: Set[str], fallback: str) -> str:
+def _pick_name(ideal: str, globs: dict[str, str], args: set[str], fallback: str) -> str:
     """Pick the best name possible for a local variable.
 
     If `ideal` is not available, return the fallback.
