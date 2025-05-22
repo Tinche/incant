@@ -26,7 +26,7 @@ from ._codegen import (
 )
 from ._compat import NO_OVERRIDE, Override, get_annotated_override, signature
 
-__all__ = ["NO_OVERRIDE", "Override", "Hook", "Incanter", "IncantError"]
+__all__ = ["NO_OVERRIDE", "Hook", "IncantError", "Incanter", "Override"]
 
 _type = type
 

@@ -124,9 +124,11 @@ def compile_compose(
         if _is_constant_factory(invoc):
             const_val = invoc.factory()
             global_name = _pick_name(
-                invoc.factory.__name__
-                if invoc.factory.__name__ != "lambda"
-                else "lambda",
+                (
+                    invoc.factory.__name__
+                    if invoc.factory.__name__ != "lambda"
+                    else "lambda"
+                ),
                 globs,
                 outer_arg_names,
                 f"_incant_constant_{i}",
@@ -158,9 +160,9 @@ def compile_compose(
 
         if invoc.factory in inlineable and not invoc.is_ctx_manager:
             aw = "await " if iscoroutinefunction(invoc.factory) else ""
-            inline_exprs_by_factory[
-                invoc.factory
-            ] = f"{aw}{global_fn_name}({', '.join(local_arg_lines)})"
+            inline_exprs_by_factory[invoc.factory] = (
+                f"{aw}{global_fn_name}({', '.join(local_arg_lines)})"
+            )
 
         else:
             local_name = f"_incant_local_{local_vars_ix_by_factory[invoc.factory]}"

@@ -6,11 +6,12 @@ from typing import ContextManager, NewType
 
 from attrs import define, has
 from cattrs import structure
-from incant import Incanter
 from quart import Quart, request
 from quattro import CancelScope, TaskGroup, fail_after
 from structlog.stdlib import BoundLogger, get_logger
 from werkzeug.exceptions import BadRequest
+
+from incant import Incanter
 
 app = Quart(__name__)
 incanter = Incanter()

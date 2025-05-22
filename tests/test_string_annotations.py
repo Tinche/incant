@@ -1,10 +1,12 @@
 """Test support for __future__ annotations."""
+
 from __future__ import annotations
 
 import sys
 from inspect import Parameter, signature
 
 import pytest
+
 from incant import Incanter
 
 pytestmark = pytest.mark.skipif(
