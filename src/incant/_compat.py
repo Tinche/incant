@@ -2,9 +2,9 @@ import sys
 from functools import partial
 from inspect import Parameter
 from inspect import signature as sig
-from typing import Any, Optional
+from typing import Any, Optional, _AnnotatedAlias  # type: ignore
 
-from attr import frozen
+from attrs import frozen
 
 NO_OVERRIDE = object()
 
@@ -14,12 +14,6 @@ class Override:
     name: Optional[str] = None
     annotation: Any = NO_OVERRIDE
 
-
-if sys.version_info >= (3, 9):
-    from typing import _AnnotatedAlias  # type: ignore
-
-else:
-    from typing_extensions import _AnnotatedAlias
 
 if sys.version_info >= (3, 10):
     signature = partial(sig, eval_str=True)

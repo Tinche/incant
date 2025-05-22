@@ -1,19 +1,7 @@
+from collections.abc import Awaitable, Sequence
 from functools import lru_cache
 from inspect import Parameter, Signature, iscoroutinefunction
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Optional, TypeVar, Union
 
 from attrs import Factory, define, field, frozen
 
@@ -59,7 +47,7 @@ def is_subclass(type, superclass) -> bool:
 @frozen
 class Hook:
     predicate: PredicateFn
-    factory: Optional[Tuple[Callable[[Parameter], Callable], Optional[CtxManagerKind]]]
+    factory: Optional[tuple[Callable[[Parameter], Callable], Optional[CtxManagerKind]]]
 
     @classmethod
     def for_name(cls, name: str, hook: Optional[Callable]) -> "Hook":
@@ -84,7 +72,7 @@ class Incanter:
     arguments.
     """
 
-    hook_factory_registry: List[Hook] = Factory(list)
+    hook_factory_registry: list[Hook] = Factory(list)
     _call_cache: Callable = field(
         init=False,
         default=Factory(lambda self: lru_cache(None)(self._gen_call), takes_self=True),
@@ -101,7 +89,7 @@ class Incanter:
         fn: Callable[..., R],
         hooks: Sequence[Hook] = (),
         is_async: Optional[bool] = None,
-        forced_deps: Sequence[Union[Callable, Tuple[Callable, CtxManagerKind]]] = (),
+        forced_deps: Sequence[Union[Callable, tuple[Callable, CtxManagerKind]]] = (),
     ) -> Callable[..., R]:
         """Compose `fn` with its satisfied dependencies, potentially creating a new function.
 
@@ -173,8 +161,8 @@ class Incanter:
 
     def register_by_type(
         self,
-        fn: Union[Callable, Type],
-        type: Optional[Type] = None,
+        fn: Union[Callable, type],
+        type: Optional[type] = None,
         is_ctx_manager: Optional[CtxManagerKind] = None,
     ):
         """
@@ -232,8 +220,8 @@ class Incanter:
     def _incant(
         self,
         fn: Callable,
-        args: Tuple[Any, ...],
-        kwargs: Dict[str, Any],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
     ):
         """The shared entrypoint for ``incant`` and ``aincant``."""
 
@@ -253,11 +241,11 @@ class Incanter:
     def _gen_incant_plan(
         self,
         fn: Callable,
-        pos_args: Tuple[PredicateFn, ...],
-        kwargs: Dict[str, PredicateFn],
-    ) -> List[Union[int, str]]:
+        pos_args: tuple[PredicateFn, ...],
+        kwargs: dict[str, PredicateFn],
+    ) -> list[Union[int, str]]:
         """Generate a plan to invoke `fn`, potentially using `args` and `kwargs`."""
-        pos_arg_plan: List[Union[int, str]] = []
+        pos_arg_plan: list[Union[int, str]] = []
         sig = signature(fn)
         for arg_name, arg in sig.parameters.items():
             found = False
@@ -291,8 +279,8 @@ class Incanter:
     def _gen_incant(
         self,
         fn: Callable,
-        pos_args: Tuple[PredicateFn, ...],
-        kwargs: Set[Tuple[str, PredicateFn]],
+        pos_args: tuple[PredicateFn, ...],
+        kwargs: set[tuple[str, PredicateFn]],
     ) -> Callable:
         plan = self._gen_incant_plan(fn, pos_args, dict(kwargs))
         return compile_incant_wrapper(fn, plan, len(pos_args), len(kwargs))
@@ -301,8 +289,8 @@ class Incanter:
         self,
         fn: Callable,
         additional_hooks: Sequence[Hook],
-        forced_deps: Sequence[Tuple[Callable, Optional[CtxManagerKind]]] = (),
-    ) -> List[Tuple[Callable, Optional[CtxManagerKind], List[Dep]]]:
+        forced_deps: Sequence[tuple[Callable, Optional[CtxManagerKind]]] = (),
+    ) -> list[tuple[Callable, Optional[CtxManagerKind], list[Dep]]]:
         """Generate the dependency tree for `fn`.
 
         The dependency tree is a list of factories and their dependencies.
@@ -310,7 +298,7 @@ class Incanter:
         The actual function is the last item.
         """
         to_process = [(fn, None), *forced_deps]
-        final_nodes: List[Tuple[Callable, Optional[CtxManagerKind], List[Dep]]] = []
+        final_nodes: list[tuple[Callable, Optional[CtxManagerKind], list[Dep]]] = []
         hooks = list(additional_hooks) + self.hook_factory_registry
         already_processed_hooks = set()
         while to_process:
@@ -318,7 +306,7 @@ class Incanter:
             to_process = []
             for node, ctx_mgr_kind in _nodes:
                 sig = _signature(node)
-                dependents: List[Union[ParameterDep, FactoryDep]] = []
+                dependents: list[Union[ParameterDep, FactoryDep]] = []
                 for name, param in sig.parameters.items():
                     if (
                         node is not fn
@@ -361,9 +349,9 @@ class Incanter:
     def _gen_call(
         self,
         fn: Callable,
-        hooks: Tuple[Hook, ...] = (),
+        hooks: tuple[Hook, ...] = (),
         is_async: Optional[bool] = False,
-        forced_deps: Tuple[Tuple[Callable, CtxManagerKind], ...] = (),
+        forced_deps: tuple[tuple[Callable, CtxManagerKind], ...] = (),
     ):
         dep_tree = self._gen_dep_tree(fn, hooks, forced_deps)
         if len(dep_tree) == 1 and (
@@ -379,7 +367,7 @@ class Incanter:
                 for factory, ctx_mgr_kind, _ in dep_tree
             )
 
-        invocs: List[Invocation] = []
+        invocs: list[Invocation] = []
         # All non-parameter deps become invocations.
         for ix, (factory, ctx_mgr_kind, deps) in enumerate(dep_tree[:-1]):
             if not is_async and (
@@ -416,7 +404,7 @@ class Incanter:
             dep for node in dep_tree for dep in node[2] if isinstance(dep, ParameterDep)
         ]
         # We need to do a pass over the outer args to consolidate duplicates.
-        per_outer_arg: dict[str, List[ParameterDep]] = {}
+        per_outer_arg: dict[str, list[ParameterDep]] = {}
         for arg in outer_args:
             per_outer_arg.setdefault(arg.arg_name, []).append(arg)
 

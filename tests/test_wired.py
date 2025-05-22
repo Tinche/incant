@@ -5,7 +5,6 @@ to prove feature parity.
 """
 
 from collections import defaultdict
-from typing import List
 
 from attrs import Factory, define
 
@@ -222,7 +221,7 @@ def test_greeter_datastore(incanter: Incanter):
 
     @define
     class Datastore:
-        customers: List[Customer] = Factory(list)
+        customers: list[Customer] = Factory(list)
 
     @define
     class Greeter:
@@ -271,12 +270,12 @@ def test_greeter_datastore(incanter: Incanter):
 
     incanter.compose_and_call(add_to_datastore)
 
-    def sample_interactions(incanter: Incanter) -> List[str]:
+    def sample_interactions(incanter: Incanter) -> list[str]:
         """Pretend to do a couple of customer interactions"""
 
         greetings = []
 
-        def get_customers(datastore: Datastore) -> List[Customer]:
+        def get_customers(datastore: Datastore) -> list[Customer]:
             return list(datastore.customers)
 
         customers = incanter.compose_and_call(get_customers)
