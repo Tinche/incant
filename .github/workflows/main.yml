@@ -25,8 +25,8 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           allow-prereleases: true
 
-      - uses: hynek/setup-cached-uv@v2
-      - uses: extractions/setup-just@v3
+      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2.3.0
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff  # v3.0.0
 
       - name: "Run Tox"
         run: |
