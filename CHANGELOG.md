@@ -6,7 +6,7 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is when we need to start branches for older releases (only for emergencies).
 
-## 24.1.0 (UNRELEASED)
+## 25.1.0 (2025-05-25)
 
 - Python 3.14 support.
   ([#17](https://github.com/Tinche/incant/pull/17))
