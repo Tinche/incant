@@ -18,6 +18,8 @@ The **third number** is when we need to start branches for older releases (only 
 - Switch to [uv](https://docs.astral.sh/uv/).
   ([#18](https://github.com/Tinche/incant/pull/18))
 - Dropped Python 3.8.
+- Use Zizmor for GitHub Actions hardening.
+  ([#21](https://github.com/Tinche/incant/pull/21))
 
 ## 23.2.0 (2023-10-30)
 
